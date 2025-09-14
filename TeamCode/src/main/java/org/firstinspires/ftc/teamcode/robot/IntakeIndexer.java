@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.robot;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
@@ -8,7 +7,6 @@ import org.firstinspires.ftc.teamcode.utils.ColorSensorBall;
 import org.firstinspires.ftc.teamcode.utils.ColorSensorBall.BallColor;
 import org.firstinspires.ftc.teamcode.utils.PIDController;
 
-@Configurable
 public class IntakeIndexer {
     public static final double triggerPressThreshold = 0.1;
     public static final double collectPower = 0.99;
@@ -24,7 +22,7 @@ public class IntakeIndexer {
         OFF, COLLECTING, INDEXING
     }
 
-    // both index types align so that a ball is ready to be shot
+    // both index types align a ball so that it can be shot
     // align_closest aligns the closest ball to be shot
     // align_pattern aligns the ball of the correct color to be shot
     public enum IndexType {
@@ -61,6 +59,7 @@ public class IntakeIndexer {
             new ColorSensorBall(robot, "c3")
         };
         ballColors = new BallColor[] {BallColor.NONE, BallColor.NONE, BallColor.NONE};
+        patternColor = BallColor.PURPLE;
     }
 
     public void update() {
@@ -73,7 +72,7 @@ public class IntakeIndexer {
                 else if(robot.g1.isFirstLeftBumper())
                     setStateIndexing(IndexType.ALIGN_CLOSEST);
                 else if(indexerAligned && !ballColorsUpdated)
-                    updateBallColors();
+                        updateBallColors();
                 break;
             case COLLECTING:
                 if(listenCollectInput())

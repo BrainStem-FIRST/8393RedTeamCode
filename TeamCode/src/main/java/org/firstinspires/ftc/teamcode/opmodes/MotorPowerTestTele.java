@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
-@Configurable
 @TeleOp(name="Motor power test tele")
 public class MotorPowerTestTele extends LinearOpMode {
     public static String motorName = "BR";
