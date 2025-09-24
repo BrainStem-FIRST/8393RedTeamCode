@@ -17,6 +17,8 @@ public class Robot {
     public final Follower follower;
     public final IntakeIndexer intakeIndexer;
 
+    public final Shooter shooter;
+
     public Robot(HardwareMap hardwareMap, Telemetry telemetry, GamepadTracker g1, GamepadTracker g2, boolean teleop) {
         this.hardwareMap = hardwareMap;
         this.telemetry = telemetry;
@@ -24,6 +26,7 @@ public class Robot {
         this.g2 = g2;
 
         intakeIndexer = new IntakeIndexer(this);
+        shooter = new Shooter(this);
 
         follower = Constants.createFollower(hardwareMap);
         if(teleop)
