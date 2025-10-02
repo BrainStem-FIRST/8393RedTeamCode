@@ -10,11 +10,21 @@ import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 public class Tele extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
-        Robot robot = new Robot(hardwareMap, telemetry, new GamepadTracker(gamepad1), new GamepadTracker(gamepad2), true);
+        telemetry.setMsTransmissionInterval(11);
+
+        GamepadTracker g1 = new GamepadTracker(gamepad1);
+        GamepadTracker g2 = new GamepadTracker(gamepad2);
+
+        Robot robot = new Robot(hardwareMap, telemetry, g1, g2);
+        robot.follower.startTeleopDrive();
 
         waitForStart();
         while(opModeIsActive()) {
+            g1.update();
+            g2.update();
+
             robot.update();
+
             telemetry.update();
         }
     }

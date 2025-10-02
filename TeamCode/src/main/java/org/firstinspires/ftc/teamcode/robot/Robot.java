@@ -15,23 +15,29 @@ public class Robot {
     public final Intake intake;
     public final Indexer indexer;
     public final Shooter shooter;
+    public final Parker parker;
 
-    public Robot(HardwareMap hardwareMap, Telemetry telemetry, GamepadTracker g1, GamepadTracker g2, boolean teleop) {
+    public Robot(HardwareMap hardwareMap, Telemetry telemetry, GamepadTracker g1, GamepadTracker g2) {
         this.hardwareMap = hardwareMap;
         this.telemetry = telemetry;
         this.g1 = g1;
         this.g2 = g2;
 
-        intake = new Intake(this);
         indexer = new Indexer(this);
+        intake = new Intake(this);
+
         shooter = new Shooter(this);
+        parker = new Parker(this);
 
         follower = Constants.createFollower(hardwareMap);
-        if(teleop)
-            follower.startTeleopDrive();
     }
     public void update() {
+        indexer.update();
         intake.update();
+
+        shooter.update();
+        parker.update();
+
         follower.update();
     }
 }

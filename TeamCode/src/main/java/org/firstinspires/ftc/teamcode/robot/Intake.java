@@ -4,23 +4,22 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 public class Intake {
-    public static final double triggerPressThreshold = 0.1;
-    public static final double collectPower = 0.99;
+    public static final double collectPower = 0.99, indexIntakePower = 0.1;
     private final Robot robot;
 
     // state descriptions:
     // OFF: motor not moving
     // COLLECTING: motor running to intake
-    public enum State {
+    public enum IntakeState {
         OFF, COLLECTING
     }
 
-    private State state;
+    private IntakeState intakeState;
     private final DcMotorEx intake;
     private double motorPower;
     public Intake(Robot robot) {
         this.robot = robot;
-        state = State.OFF;
+        intakeState = IntakeState.OFF;
         intake = robot.hardwareMap.get(DcMotorEx.class, "intakeIndexer");
         intake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -28,7 +27,7 @@ public class Intake {
     }
 
     public void update() {
-        switch(state) {
+        switch(intakeState) {
             case OFF:
                 if(listenCollectToggleInput())
                     setStateCollecting(collectPower);
@@ -36,8 +35,8 @@ public class Intake {
             case COLLECTING:
                 if(listenCollectToggleInput() || robot.indexer.getNumBalls() == 3)
                     setStateOff();
-                else if(robot.indexer.getState() == Indexer.State.INDEXING)
-                    motorPower = 0;
+                else if(robot.indexer.getIndexerState() == Indexer.IndexerState.INDEXING)
+                    motorPower = indexIntakePower;
                 else
                     motorPower = collectPower;
                 break;
@@ -46,11 +45,11 @@ public class Intake {
     }
 
     public void setStateOff() {
-        state = State.OFF;
+        intakeState = IntakeState.OFF;
         motorPower = 0;
     }
     public void setStateCollecting(double power) {
-        state = State.COLLECTING;
+        intakeState = IntakeState.COLLECTING;
         motorPower = power;
     }
 
