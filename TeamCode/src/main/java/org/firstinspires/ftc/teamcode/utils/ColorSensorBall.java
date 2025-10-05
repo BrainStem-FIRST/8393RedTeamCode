@@ -8,11 +8,11 @@ import org.firstinspires.ftc.teamcode.robot.Robot;
 
 // has caching capability
 public class ColorSensorBall {
-    public static int[] greenBallLow = {0, 0, 0};
-    public static int[] greenBallHigh = {20, 20, 20};
+    public static int[] greenBallLow = {0, 0, 0, 0};
+    public static int[] greenBallHigh = {1, 1, 1, 1};
 
-    public static int[] purpleBallLow = {0, 0, 0};
-    public static int[] purpleBallHigh = {20, 20, 20};
+    public static int[] purpleBallLow = {0, 0, 0, 0};
+    public static int[] purpleBallHigh = {1, 1, 1, 1};
 
     public enum BallColor {
         PURPLE,
@@ -32,14 +32,16 @@ public class ColorSensorBall {
         updated = false;
     }
     public BallColor getBallColor() {
-        if(inBounds(greenBallLow[0], getR(), greenBallHigh[0])
-                && inBounds(greenBallLow[1], getG(), greenBallHigh[1])
-                && inBounds(greenBallLow[2], getB(), greenBallHigh[2]))
+        if(inBounds(greenBallLow[0], getRPercent(), greenBallHigh[0])
+                && inBounds(greenBallLow[1], getGPercent(), greenBallHigh[1])
+                && inBounds(greenBallLow[2], getBPercent(), greenBallHigh[2])
+                && inBounds(greenBallLow[3], getSum(), greenBallHigh[3]))
             return BallColor.GREEN;
 
-        if(inBounds(purpleBallLow[0], getR(), purpleBallHigh[0])
-                && inBounds(purpleBallLow[1], getG(), purpleBallHigh[1])
-                && inBounds(purpleBallLow[2], getB(), purpleBallHigh[2]))
+        if(inBounds(purpleBallLow[0], getRPercent(), purpleBallHigh[0])
+                && inBounds(purpleBallLow[1], getGPercent(), purpleBallHigh[1])
+                && inBounds(purpleBallLow[2], getBPercent(), purpleBallHigh[2])
+                && inBounds(purpleBallLow[3], getSum(), purpleBallHigh[3]))
             return BallColor.PURPLE;
 
         return BallColor.NONE;
@@ -52,23 +54,28 @@ public class ColorSensorBall {
         b = Color.blue(sum);
         updated = true;
     }
-    private boolean inBounds(int low, int val, int high) {
+    private boolean inBounds(double low, double val, double high) {
         return val >= low && val <= high;
     }
 
-    private int getR() {
+    private double getRPercent() {
         if(!updated)
             updateChannels();
-        return r;
+        return r * 1. / (r + g + b);
     }
-    private int getG() {
+    private double getGPercent() {
         if(!updated)
             updateChannels();
-        return g;
+        return g * 1. / (r + g + b);
     }
-    private int getB() {
+    private double getBPercent() {
         if(!updated)
             updateChannels();
-        return b;
+        return b * 1. / (r + g + b);
+    }
+    private double getSum() {
+        if(!updated)
+            updateChannels();
+        return r + g + b;
     }
 }
