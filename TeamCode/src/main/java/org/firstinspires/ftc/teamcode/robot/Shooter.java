@@ -22,7 +22,7 @@ public class Shooter {
 
     public Shooter(Robot robot) {
         this.robot = robot;
-        state = Shooter.State.OFF;
+        state = Shooter.State.SHOOTING;
 
         motor1 = robot.hardwareMap.get(DcMotorEx.class, "shooter1");
         motor1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -36,22 +36,15 @@ public class Shooter {
     }
 
     public void update() {
-        switch(state){
-            case OFF:
-                if (!shootTriggerPressed()) {
-                    setStateOff();
-                    setShooterPower(motorPower);
-                }
-                break;
-            case SHOOTING:
-                if (shootTriggerPressed()) {
-                    setStateShooting();
-                    setShooterPower(motorPower);
-
-                }
-                break;
-        }
+        setStateShooting();
+        setShooterPower(motorPower);
     }
+
+    /*TODO:
+    - two powers, one for far position, one for (right) near position
+    - only one state (shooting)
+    - based on distance from goal (a particular coordinate for position of each goal)
+     */
 
     private void setStateOff(){
         state = State.OFF;
