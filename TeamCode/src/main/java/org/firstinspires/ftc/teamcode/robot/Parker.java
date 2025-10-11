@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import org.firstinspires.ftc.teamcode.utils.PIDController;
 
 public class Parker {
-    public static final int upEncoder = 100, errorThreshold = 10;
+    public static final int upEncoder = 100;
     public static final double minUpPower = -0.3;
     private final Robot robot;
     private final DcMotorEx parkMotor;
@@ -38,7 +38,12 @@ public class Parker {
                 }
                 break;
             case UP:
-                motorPower = robot.g1.isFirstX() ? 0 : getUpPower();
+                if(robot.g1.isFirstX()) {
+                    motorPower = 0;
+                    parkState = ParkState.DOWN;
+                }
+                else
+                    motorPower = getUpPower();
                 break;
         }
         parkMotor.setPower(motorPower);
