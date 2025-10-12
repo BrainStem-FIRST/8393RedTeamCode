@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -16,12 +17,16 @@ public class Tele extends LinearOpMode {
         GamepadTracker g2 = new GamepadTracker(gamepad2);
 
         Robot robot = new Robot(hardwareMap, telemetry, g1, g2);
+        robot.follower.setStartingPose(new Pose(0, 0, 0));
         robot.follower.startTeleopDrive();
+        robot.follower.update();
 
         waitForStart();
         while(opModeIsActive()) {
             g1.update();
             g2.update();
+
+            robot.follower.setTeleOpDrive(-gamepad1.left_stick_x, -gamepad1.left_stick_y, -gamepad1.right_stick_x, true);
 
             robot.update();
 
