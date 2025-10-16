@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.robot;
 
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.utils.ColorSensorBall;
@@ -39,10 +40,12 @@ public class Indexer {
     }
     private TransferState transferState;
 
+    private DcMotorEx indexerEncoder;
+
     private final BallColor[] ballColors;
     private int intakeBallI; // 0-5: represents 6 possible places where ball could be in the indexer
     private int numBalls;
-    private final ColorSensorBall colorSensor;
+    private final ColorSensorBall colorSensor1, colorSensor2;
 
     public Indexer(Robot robot) {
         this.robot = robot;
@@ -58,77 +61,37 @@ public class Indexer {
         alignMode = AlignMode.INTAKE;
         transferState = TransferState.OFF;
 
+        indexerEncoder = robot.hardwareMap.get(DcMotorEx.class, "FL");
 
         ballColors = new BallColor[] {BallColor.NONE, BallColor.NONE, BallColor.NONE};
         intakeBallI = 0;
         numBalls = 0;
 
-        colorSensor = new ColorSensorBall(robot, "color sensor");
+        colorSensor1 = new ColorSensorBall(robot, "colorSensor1");
+        colorSensor2 = new ColorSensorBall(robot, "colorSensor2");
     }
 
     public void update() {
         updateIndexer();
         updateTransfer();
+        robot.telemetry.addData("indexer encoder", getIndexerEncoder());
     }
     private void updateIndexer() {
-        colorSensor.update();
+        colorSensor1.update();
         switch(indexerState) {
             case OFF:
-                BallColor ballColor = colorSensor.getBallColor();
-                // listening for indexer rotation input
-                // dpad left/right is 120 degree rotations
-                // dpad up/down is 60 degree rotations
-                boolean autoDetectBall = numBalls < 3 && ballColor != BallColor.NONE && intakeBallI % 2 == 0;
-                if(robot.g1.isFirstDpadLeft()
-                || autoDetectBall) {
-                    if(autoDetectBall) {
-                        ballColors[intakeBallI/2] = ballColor;
-                        numBalls++;
-                    }
-                    // don't rotate indexer if automatically detected and if indexer is filled
-                    if(!autoDetectBall || numBalls < 3) {
-                        setIndexerIndexing(thirdRotateAmount);
-                        updateIntakeBallI(2);
-                    }
-                }
-                else if(robot.g1.isFirstDpadRight()) {
-                    setIndexerIndexing(-thirdRotateAmount);
-                    updateIntakeBallI(-2);
-                }
-                else if(robot.g1.isFirstDpadUp() || (numBalls == 3 && alignMode == AlignMode.INTAKE)) {
-                    updateIntakeBallI(1);
-                    toggleAlignMode(thirdRotateAmount / 2);
-                }
-                else if(robot.g1.isFirstDpadDown()) {
-                    updateIntakeBallI(-1);
-                    toggleAlignMode(-thirdRotateAmount / 2);
-                }
+
                 break;
             case INDEXING:
-                if(Math.abs(getIndexerEncoder() - indexerPid.getTarget()) < errorThreshold)
-                    setIndexerOff();
-                else
-                    indexPower = indexerPid.update(getIndexerEncoder());
-                break;
+
         }
         indexer.setPower(indexPower);
     }
     private void updateTransfer() {
         switch(transferState) {
             case OFF:
-                // listening for input to transfer ball to shooter
-                if(robot.g1.isFirstA() && alignMode == AlignMode.SHOOT)
-                    setTransferTransferring();
                 break;
             case TRANSFERRING:
-                if(transferTimer.seconds() >= minTransferTime) {
-                    setTransferOff();
-                    // automatically rotate indexer if still more balls left
-                    if(numBalls > 0) {
-                        setIndexerIndexing(thirdRotateAmount);
-                        updateIntakeBallI(2);
-                    }
-                }
                 break;
         }
         transfer.setPower(transferPower);
@@ -166,7 +129,7 @@ public class Indexer {
         return (intakeBallI + 3) % 6; // returns position of ball that is currently aligned to shoot
     }
     public int getIndexerEncoder() {
-        return 0;
+        return indexerEncoder.getCurrentPosition();
     }
     public IndexerState getIndexerState() {
         return indexerState;
@@ -174,4 +137,15 @@ public class Indexer {
     public int getNumBalls() {
         return numBalls;
     }
+
+
+    private int listenCollectDpadInput() {
+        if (robot.g1.isFirstDpadRight()) {
+            return 1;
+        } else if (robot.g1.isFirstDpadLeft()) {
+            return -1;
+        }
+        return 0;
+    }
+
 }

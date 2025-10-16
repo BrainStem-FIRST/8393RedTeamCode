@@ -11,7 +11,7 @@ public class PIDController {
     protected double previousTime, previousError;
 
     protected double lowerInputBound = Double.NEGATIVE_INFINITY, higherInputBound = Double.POSITIVE_INFINITY;
-    protected double lowerOutputBound = Double.NEGATIVE_INFINITY, higherOutputBound = Double.POSITIVE_INFINITY;
+    protected double lowerOutputBound = -1, higherOutputBound = 1;
 
     public PIDController(double kP, double kI, double kD) {
         this.kP = kP;
@@ -38,7 +38,7 @@ public class PIDController {
         // BEFORE: double error = value - target;
         double error = target - value;
 
-        return updateWithError(error);
+        return Range.clip(updateWithError(error), lowerOutputBound, higherOutputBound);
     }
 
     private double updateWithError(double error) {

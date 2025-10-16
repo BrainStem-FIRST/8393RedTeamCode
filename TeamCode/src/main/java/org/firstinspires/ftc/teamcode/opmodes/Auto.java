@@ -21,7 +21,6 @@ public class Auto extends LinearOpMode {
 
         while(opModeIsActive()) {
             updateAuto();
-            robot.update();
             telemetry.update();
         }
     }

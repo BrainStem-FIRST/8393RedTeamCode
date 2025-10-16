@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.robot;
 
 import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -31,13 +32,13 @@ public class Robot {
 
         follower = Constants.createFollower(hardwareMap);
     }
-    public void update() {
-        indexer.update();
-        intake.update();
-
-        shooter.update();
-        parker.update();
-
+    public void initPedroTele() {
+        follower.setStartingPose(new Pose(0, 0, 0));
+        follower.startTeleopDrive();
+        follower.update();
+    }
+    public void updatePedroTele() {
+        follower.setTeleOpDrive(g1.gamepad.left_stick_y, g1.gamepad.left_stick_x, g1.gamepad.right_stick_x, true);
         follower.update();
     }
 }

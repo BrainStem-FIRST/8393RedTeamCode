@@ -4,7 +4,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 public class Intake {
-    public static final double collectPower = 0.99, indexIntakePower = 0.1;
+    public static double collectPower = 0.70, indexIntakePower = 0.1;
     private final Robot robot;
 
     // state descriptions:
@@ -20,12 +20,14 @@ public class Intake {
     public Intake(Robot robot) {
         this.robot = robot;
         intakeState = IntakeState.OFF;
-        intake = robot.hardwareMap.get(DcMotorEx.class, "intakeIndexer");
+        intake = robot.hardwareMap.get(DcMotorEx.class, "intake");
         intake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         motorPower = 0;
     }
-
+    public IntakeState getState() {
+        return intakeState;
+    }
     public void update() {
         switch(intakeState) {
             case OFF:
