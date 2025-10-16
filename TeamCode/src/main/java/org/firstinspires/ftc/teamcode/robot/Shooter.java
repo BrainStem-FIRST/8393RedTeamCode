@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.robot;
 
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.ServoImplEx;
@@ -25,7 +26,7 @@ public class Shooter {
     private final DcMotorEx motor1;
     private final DcMotorEx motor2;
 
-    private final ServoImplEx hoodServo;
+    private final CRServo hoodServo;
 
     // NL and NR signify the left and right near positions
     private double motorPower;
@@ -42,7 +43,7 @@ public class Shooter {
         motor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motor2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        hoodServo = robot.hardwareMap.get(ServoImplEx.class, "hoodServo");
+        hoodServo = robot.hardwareMap.get(CRServo.class, "hoodServo");
        // hoodServo.setPwmRange(); //TODO: set range
 
         motorPower = 0;
@@ -68,7 +69,6 @@ public class Shooter {
 
     private void setStateShooting(double power, double position){
         state = State.SHOOTING;
-        hoodServo.setPosition(position);
         motorPower = power;
     }
     private boolean shootTriggerPressed() { //TODO: maybe delete? since it's always spinning
@@ -86,5 +86,18 @@ public class Shooter {
     private int getMotor2Pos() {
         return motor2.getCurrentPosition();
     }
+    public State getState() {
+        return state;
+    }
 
+    public void _setHoodPower(double power) {
+        hoodServo.setPower(power);
+    }
+    public void _setShooterPower(double power) {
+        motor1.setPower(power);
+        motor2.setPower(power);
+    }
+    public double getShooterPower() {
+        return motor1.getPower();
+    }
 }

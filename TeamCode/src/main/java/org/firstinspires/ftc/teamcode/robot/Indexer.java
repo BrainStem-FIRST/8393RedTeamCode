@@ -9,7 +9,7 @@ import org.firstinspires.ftc.teamcode.utils.ColorSensorBall.BallColor;
 import org.firstinspires.ftc.teamcode.utils.PIDController;
 
 public class Indexer {
-    public static int thirdRotateAmount = 100; // encoders needed to rotate 120 degrees
+    public static int sixthRotateAmount = 100; // encoders needed to rotate 120 degrees
     public static int errorThreshold = 10;
     public static double transferServoPower = 0.99;
     public static double minTransferTime = 0.5;
@@ -80,10 +80,9 @@ public class Indexer {
         colorSensor1.update();
         switch(indexerState) {
             case OFF:
-
                 break;
             case INDEXING:
-
+                break;
         }
         indexer.setPower(indexPower);
     }
@@ -96,10 +95,6 @@ public class Indexer {
         }
         transfer.setPower(transferPower);
     }
-    private void toggleAlignMode(int rotateAmount) {
-        setIndexerIndexing(rotateAmount);
-        alignMode = alignMode == AlignMode.INTAKE ? AlignMode.SHOOT : AlignMode.INTAKE;
-    }
     private void setIndexerIndexing(int offsetGoalEncoder) {
         indexerPid.setTarget(getIndexerEncoder() + offsetGoalEncoder);
         indexPower = indexerPid.update(getIndexerEncoder());
@@ -108,25 +103,6 @@ public class Indexer {
     private void setIndexerOff() {
         indexPower = 0;
         indexerState = IndexerState.OFF;
-    }
-    private void setTransferTransferring() {
-        transferPower = transferServoPower;
-        transferState = TransferState.TRANSFERRING;
-        transferTimer.reset();
-        if(ballColors[getShooterBallI()] != BallColor.NONE) {
-            numBalls--;
-            ballColors[getShooterBallI()] = BallColor.NONE;
-        }
-    }
-    private void setTransferOff() {
-        transferPower = 0;
-        transferState = TransferState.OFF;
-    }
-    private void updateIntakeBallI(int n) {
-        intakeBallI = (intakeBallI + n) % 6;
-    }
-    private int getShooterBallI() {
-        return (intakeBallI + 3) % 6; // returns position of ball that is currently aligned to shoot
     }
     public int getIndexerEncoder() {
         return indexerEncoder.getCurrentPosition();
@@ -139,7 +115,7 @@ public class Indexer {
     }
 
 
-    private int listenCollectDpadInput() {
+    private int listenIndexerDpadInput() {
         if (robot.g1.isFirstDpadRight()) {
             return 1;
         } else if (robot.g1.isFirstDpadLeft()) {

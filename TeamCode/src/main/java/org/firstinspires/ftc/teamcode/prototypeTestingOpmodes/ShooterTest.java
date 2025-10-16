@@ -9,57 +9,38 @@ import com.qualcomm.robotcore.hardware.PwmControl;
 import com.qualcomm.robotcore.hardware.ServoImplEx;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.robot.Robot;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 
 @TeleOp(name="shooter test tele")
 public class ShooterTest extends LinearOpMode {
-    private DcMotorEx shooter1, shooter2;
 
     @Override
     public void runOpMode() throws InterruptedException {
         GamepadTracker g1 = new GamepadTracker(gamepad1);
-
-        shooter1 = hardwareMap.get(DcMotorEx.class, "shooter1");
-        shooter1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
-        shooter2 = hardwareMap.get(DcMotorEx.class, "shooter2");
-        shooter2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
-        ServoImplEx pivot = hardwareMap.get(ServoImplEx.class, "pivot");
-        pivot.setPwmRange(new PwmControl.PwmRange(500, 2500));
-        pivot.setPosition(0.5);
-
-        double shooterPower = 0;
-
+        GamepadTracker g2 = new GamepadTracker(gamepad2);
+        Robot robot = new Robot(hardwareMap, telemetry, g1, g2);
+        robot.initPedroTele();
+        boolean testing = true;
+        double inc = 0.02;
         waitForStart();
         while(opModeIsActive()) {
             g1.update();
+            robot.updatePedroTele();
 
-            // pivot angle gamepad input
-            if(g1.isFirstDpadLeft())
-                pivot.setPosition(pivot.getPosition() + 0.02);
-            else if(g1.isFirstDpadRight())
-                pivot.setPosition(pivot.getPosition() - 0.02);
-            else if(g1.gamepad.dpad_up)
-                pivot.setPosition(pivot.getPosition() + 0.01);
-            else if(g1.gamepad.dpad_down)
-                pivot.setPosition((pivot.getPosition() - 0.01));
-            // shooter power gamepad input
-            if(g1.isFirstY())
-                shooterPower += 0.025;
-            else if(g1.isFirstA())
-                shooterPower -= 0.025;
-            if(g1.isFirstX())
-                shooterPower = 0;
-            setShooterPower(shooterPower);
+            if(testing) {
+                // moving shooter
+                if(g1.isFirstY())
+                    robot.shooter._setShooterPower(robot.shooter.getShooterPower()+inc);
+                else if(g1.isFirstX())
+                    robot.shooter._setShooterPower(robot.shooter.getShooterPower()-inc);
 
-            telemetry.addData("shooter power", shooterPower);
-            telemetry.addData("pivot pos", pivot.getPosition());
+            }
+            else {
+                robot.shooter.update();
+                telemetry.addData("shooter state", robot.shooter.getState());
+            }
             telemetry.update();
         }
-    }
-    private void setShooterPower(double power) {
-        shooter1.setPower(power);
-        shooter2.setPower(power);
     }
 }

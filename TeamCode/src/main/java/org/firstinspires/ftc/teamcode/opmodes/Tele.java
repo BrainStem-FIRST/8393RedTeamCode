@@ -17,16 +17,15 @@ public class Tele extends LinearOpMode {
         GamepadTracker g2 = new GamepadTracker(gamepad2);
 
         Robot robot = new Robot(hardwareMap, telemetry, g1, g2);
-        robot.follower.setStartingPose(new Pose(0, 0, 0));
-        robot.follower.startTeleopDrive();
-        robot.follower.update();
+        robot.initPedroTele();
 
         waitForStart();
         while(opModeIsActive()) {
             g1.update();
             g2.update();
-
-            robot.follower.setTeleOpDrive(-gamepad1.left_stick_x, -gamepad1.left_stick_y, -gamepad1.right_stick_x, true);
+            robot.updatePedroTele();
+            robot.intake.update();
+            robot.parker.update();
 
             telemetry.update();
         }

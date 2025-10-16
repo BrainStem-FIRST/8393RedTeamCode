@@ -9,8 +9,6 @@ import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 
 @TeleOp(name="intake test tele")
 public class IntakeTele extends LinearOpMode {
-
-
     @Override
     public void runOpMode() throws InterruptedException {
         GamepadTracker g1 = new GamepadTracker(gamepad1);
