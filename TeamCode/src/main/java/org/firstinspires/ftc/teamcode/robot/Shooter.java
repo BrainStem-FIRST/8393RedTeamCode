@@ -2,22 +2,32 @@ package org.firstinspires.ftc.teamcode.robot;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.ServoImplEx;
 
 public class Shooter {
 
     public static final double triggerPressThreshold = 0.1;
-    public static final double shootPower = 0.99; //TODO: what power works here?
+    public static final double shootPowerFar = 0.725;
+    public static final double shootPowerNL = 0.6; //TODO: what works best here?
+    public static final double shootPowerNR = 0.5; //TODO: ?
+
+    public static final double hoodPositionFar = 0.0; //TODO: ?
+    public static final double hoodPositionNL = 0.0; //TODO: ?
+    public static final double hoodPositionNR = 0.0; //TODO: ?
     private final Robot robot;
 
-    // OFF: motor is unmoving
     // SHOOTING: motor is running to shoot the balls from the indexer
     public enum State {
-        OFF, SHOOTING
+        SHOOTING
     }
 
     private State state;
     private final DcMotorEx motor1;
     private final DcMotorEx motor2;
+
+    private final ServoImplEx hoodServo;
+
+    // NL and NR signify the left and right near positions
     private double motorPower;
 
     public Shooter(Robot robot) {
@@ -32,30 +42,36 @@ public class Shooter {
         motor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motor2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
+        hoodServo = robot.hardwareMap.get(ServoImplEx.class, "hoodServo");
+       // hoodServo.setPwmRange(); //TODO: set range
+
         motorPower = 0;
     }
 
+    // TODO: each position has a different speed and hood position
     public void update() {
-        setStateShooting();
+
+        // if (robot x is some measurement past goalX && robot y is very different from goalY)
+            setStateShooting(shootPowerFar, hoodPositionFar);
+        // else if (robot x is some measurement past goalX && robot y is closeish to goalY)
+            setStateShooting(shootPowerNL, hoodPositionNL);
+        // else if (robot x is more than the past measurements past goalX && robot y is closeish to goalY)
+            setStateShooting(shootPowerNR, hoodPositionNR);
+
         setShooterPower(motorPower);
     }
 
-    /*TODO:
-    - two powers, one for far position, one for (right) near position
-    - only one state (shooting)
-    - based on distance from goal (a particular coordinate for position of each goal)
-     */
+//    private void setStateOff(){
+//        state = State.OFF;
+//        motorPower = 0;
+//    }
 
-    private void setStateOff(){
-        state = State.OFF;
-        motorPower = 0;
-    }
-
-    private void setStateShooting(){
+    private void setStateShooting(double power, double position){
         state = State.SHOOTING;
-        motorPower = shootPower;
+        hoodServo.setPosition(position);
+        motorPower = power;
     }
-    private boolean shootTriggerPressed() {
+    private boolean shootTriggerPressed() { //TODO: maybe delete? since it's always spinning
         // checking in-taking
         return robot.g1.gamepad.right_trigger > triggerPressThreshold;
     }
