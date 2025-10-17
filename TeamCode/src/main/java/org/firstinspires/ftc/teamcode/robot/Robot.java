@@ -9,6 +9,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 
 public class Robot {
+    public double goalX, goalY;
     public final HardwareMap hardwareMap;
     public final Telemetry telemetry;
     public final GamepadTracker g1, g2;
@@ -38,7 +39,7 @@ public class Robot {
         follower.update();
     }
     public void updatePedroTele() {
-        follower.setTeleOpDrive(g1.gamepad.left_stick_y, g1.gamepad.left_stick_x, g1.gamepad.right_stick_x, true);
+        follower.setTeleOpDrive(-g1.gamepad.left_stick_y, -g1.gamepad.left_stick_x, -g1.gamepad.right_stick_x, true);
         follower.update();
     }
 }

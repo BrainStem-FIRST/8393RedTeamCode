@@ -32,14 +32,38 @@ public class ShooterTest extends LinearOpMode {
                 // moving shooter
                 if(g1.isFirstY())
                     robot.shooter._setShooterPower(robot.shooter.getShooterPower()+inc);
-                else if(g1.isFirstX())
+                else if(g1.isFirstA())
                     robot.shooter._setShooterPower(robot.shooter.getShooterPower()-inc);
+                else if(g1.isFirstX())
+                    robot.shooter._setShooterPower(0);
 
+                // moving pivot
+                if(gamepad1.dpad_up)
+                    robot.shooter._setHoodPower(0.1);
+                else if(gamepad1.dpad_down)
+                    robot.shooter._setHoodPower(-0.1);
+                else if(gamepad1.dpad_left)
+                    robot.shooter._setHoodPower(0.5);
+                else if(gamepad1.dpad_right)
+                    robot.shooter._setHoodPower(-0.5);
+                else
+                    robot.shooter._setHoodPower(0);
+
+                // moving transfer
+                if(gamepad1.right_bumper)
+                    robot.indexer._setTransferPower(0.99);
+                else if(gamepad1.left_bumper)
+                    robot.indexer._setTransferPower(-0.99);
+                else if(gamepad1.right_trigger > 0.1)
+                    robot.indexer._setTransferPower(0);
             }
             else {
                 robot.shooter.update();
                 telemetry.addData("shooter state", robot.shooter.getState());
             }
+            telemetry.addData("shooter power", robot.shooter.getShooterPower());
+            telemetry.addData("hood power", robot.shooter._getHoodPower());
+            telemetry.addData("transfer power", robot.indexer.getTransferPower());
             telemetry.update();
         }
     }

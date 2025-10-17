@@ -15,7 +15,6 @@ public class IntakeTele extends LinearOpMode {
         GamepadTracker g2 = new GamepadTracker(gamepad2);
         Robot robot = new Robot(hardwareMap, telemetry, g1, g2);
         robot.initPedroTele();
-
         waitForStart();
 
         while (opModeIsActive()) {
@@ -25,6 +24,9 @@ public class IntakeTele extends LinearOpMode {
             robot.updatePedroTele();
 
             telemetry.addData("intake state", robot.intake.getState());
+            telemetry.addData("x", robot.follower.getPose().getX());
+            telemetry.addData("y", robot.follower.getPose().getY());
+            telemetry.addData("heading (deg)", robot.follower.getPose().getHeading()*180/Math.PI);
             telemetry.update();
         }
     }

@@ -124,4 +124,11 @@ public class Indexer {
         return 0;
     }
 
+    public void _setTransferPower(double power) {
+        transfer.setPower(power);
+    }
+    public double getTransferPower() {
+        return transferPower;
+    }
+
 }

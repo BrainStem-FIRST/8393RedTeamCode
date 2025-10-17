@@ -93,11 +93,15 @@ public class Shooter {
     public void _setHoodPower(double power) {
         hoodServo.setPower(power);
     }
+    public double _getHoodPower() {
+        return hoodServo.getPower();
+    }
     public void _setShooterPower(double power) {
         motor1.setPower(power);
-        motor2.setPower(power);
+        motor2.setPower(-power);
     }
     public double getShooterPower() {
         return motor1.getPower();
     }
+
 }
