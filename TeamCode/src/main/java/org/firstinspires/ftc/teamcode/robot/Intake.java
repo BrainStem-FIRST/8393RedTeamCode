@@ -31,11 +31,11 @@ public class Intake {
     public void update() {
         switch(intakeState) {
             case OFF:
-                if(listenCollectToggleInput())
+                if(listenCollectInput())
                     setStateCollecting(collectPower);
                 break;
             case COLLECTING:
-                if(listenCollectToggleInput() || robot.indexer.getNumBalls() == 3)
+                if(robot.indexer.getNumBalls() == 3 || !listenCollectInput())
                     setStateOff();
                 else if(robot.indexer.getIndexerState() == Indexer.IndexerState.INDEXING)
                     motorPower = indexIntakePower;
@@ -55,7 +55,7 @@ public class Intake {
         motorPower = power;
     }
 
-    private boolean listenCollectToggleInput() {
-        return robot.g1.isFirstLeftBumper();
+    private boolean listenCollectInput() {
+        return robot.g1.gamepad.right_trigger > 0.1;
     }
 }

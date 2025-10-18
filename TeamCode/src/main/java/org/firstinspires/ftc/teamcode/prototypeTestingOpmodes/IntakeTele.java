@@ -21,12 +21,14 @@ public class IntakeTele extends LinearOpMode {
             g1.update();
             g2.update();
             robot.intake.update();
+            robot.indexer.update();
             robot.updatePedroTele();
-
-            telemetry.addData("intake state", robot.intake.getState());
-            telemetry.addData("x", robot.follower.getPose().getX());
-            telemetry.addData("y", robot.follower.getPose().getY());
-            telemetry.addData("heading (deg)", robot.follower.getPose().getHeading()*180/Math.PI);
+            telemetry.addData("indexer encoder", robot.indexer.getIndexerEncoder());
+            telemetry.addData("indexer state", robot.indexer.getIndexerState());
+//            telemetry.addData("intake state", robot.intake.getState());
+//            telemetry.addData("x", robot.follower.getPose().getX());
+//            telemetry.addData("y", robot.follower.getPose().getY());
+//            telemetry.addData("heading (deg)", robot.follower.getPose().getHeading()*180/Math.PI);
             telemetry.update();
         }
     }

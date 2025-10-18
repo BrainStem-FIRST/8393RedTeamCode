@@ -78,10 +78,18 @@ public class Indexer {
     }
     private void updateIndexer() {
         colorSensor1.update();
+        colorSensor2.update();
         switch(indexerState) {
             case OFF:
+                int n = listenIndexerDpadInput();
+                if(n != 0)
+                    setIndexerIndexing(n*sixthRotateAmount);
                 break;
             case INDEXING:
+                if(Math.abs(getIndexerEncoder() - indexerPid.getTarget()) < errorThreshold)
+                    setIndexerOff();
+                else
+                    indexPower = indexerPid.update(getIndexerEncoder());
                 break;
         }
         indexer.setPower(indexPower);
@@ -89,8 +97,12 @@ public class Indexer {
     private void updateTransfer() {
         switch(transferState) {
             case OFF:
+                if(robot.g1.isFirstY())
+                    setTransferTransferring();
                 break;
             case TRANSFERRING:
+                if(transferTimer.seconds() > minTransferTime)
+                    setTransferOff();
                 break;
         }
         transfer.setPower(transferPower);
@@ -103,6 +115,15 @@ public class Indexer {
     private void setIndexerOff() {
         indexPower = 0;
         indexerState = IndexerState.OFF;
+    }
+    private void setTransferTransferring() {
+        transferTimer.reset();
+        transferState = TransferState.TRANSFERRING;
+        transferPower = transferServoPower;
+    }
+    private void setTransferOff() {
+        transferState = TransferState.OFF;
+        transferPower = 0;
     }
     public int getIndexerEncoder() {
         return indexerEncoder.getCurrentPosition();
