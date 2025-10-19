@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.pedroPathing;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.FollowerBuilder;
@@ -25,10 +26,11 @@ public class Constants {
             .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
             .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
             .xVelocity(67.62)
-            .yVelocity(46.19);
+            .yVelocity(46.19)
+            .useBrakeModeInTeleOp(true);
     public static PinpointConstants localizerConstants = new PinpointConstants()
             .forwardPodY(4)
-            .strafePodX(-6.45)
+            .strafePodX(-6)
             .distanceUnit(DistanceUnit.INCH)
             .hardwareMapName("odo")
             .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
@@ -37,7 +39,8 @@ public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
             .mass(10.677564)
             .forwardZeroPowerAcceleration(-46.29)
-            .lateralZeroPowerAcceleration(-64.99);
+            .lateralZeroPowerAcceleration(-64.99)
+            .headingPIDFCoefficients(new PIDFCoefficients(0.01, 0, 0, 0));
 
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 

@@ -11,6 +11,7 @@ import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 public class IntakeTele extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
+        telemetry.setMsTransmissionInterval(11);
         GamepadTracker g1 = new GamepadTracker(gamepad1);
         GamepadTracker g2 = new GamepadTracker(gamepad2);
         Robot robot = new Robot(hardwareMap, telemetry, g1, g2);
@@ -23,12 +24,14 @@ public class IntakeTele extends LinearOpMode {
             robot.intake.update();
             robot.indexer.update();
             robot.updatePedroTele();
+
+
             telemetry.addData("indexer encoder", robot.indexer.getIndexerEncoder());
-            telemetry.addData("indexer state", robot.indexer.getIndexerState());
+            telemetry.addData("num balls", robot.indexer.getNumBalls());
 //            telemetry.addData("intake state", robot.intake.getState());
-//            telemetry.addData("x", robot.follower.getPose().getX());
-//            telemetry.addData("y", robot.follower.getPose().getY());
-//            telemetry.addData("heading (deg)", robot.follower.getPose().getHeading()*180/Math.PI);
+            telemetry.addData("x", robot.follower.getPose().getX());
+            telemetry.addData("y", robot.follower.getPose().getY());
+            telemetry.addData("heading (deg)", robot.follower.getPose().getHeading()*180/Math.PI);
             telemetry.update();
         }
     }

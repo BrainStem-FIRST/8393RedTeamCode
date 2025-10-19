@@ -8,8 +8,8 @@ import org.firstinspires.ftc.teamcode.robot.Robot;
 
 // has caching capability
 public class ColorSensorBall {
-    public static int[] greenBallLow = {0, 0, 0, 0};
-    public static int[] greenBallHigh = {1, 1, 1, 1};
+    public static int[] greenBallLow = {2, 6, 0, 0};
+    public static int[] greenBallHigh = {4, 10, 1, 1};
 
     public static int[] purpleBallLow = {0, 0, 0, 0};
     public static int[] purpleBallHigh = {1, 1, 1, 1};

@@ -27,6 +27,8 @@ public class ShooterTest extends LinearOpMode {
         while(opModeIsActive()) {
             g1.update();
             robot.updatePedroTele();
+            robot.intake.update();
+            robot.indexer.update();
 
             if(testing) {
                 // moving shooter
@@ -42,20 +44,12 @@ public class ShooterTest extends LinearOpMode {
                     robot.shooter._setHoodPower(0.1);
                 else if(gamepad1.dpad_down)
                     robot.shooter._setHoodPower(-0.1);
-                else if(gamepad1.dpad_left)
-                    robot.shooter._setHoodPower(0.5);
-                else if(gamepad1.dpad_right)
-                    robot.shooter._setHoodPower(-0.5);
                 else
                     robot.shooter._setHoodPower(0);
 
                 // moving transfer
                 if(gamepad1.right_bumper)
-                    robot.indexer._setTransferPower(0.99);
-                else if(gamepad1.left_bumper)
-                    robot.indexer._setTransferPower(-0.99);
-                else if(gamepad1.right_trigger > 0.1)
-                    robot.indexer._setTransferPower(0);
+                    robot.indexer._setTransferPower(robot.indexer.getTransferPower() == 0 ? -0.99 :0);
             }
             else {
                 robot.shooter.update();

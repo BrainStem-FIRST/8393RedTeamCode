@@ -65,7 +65,7 @@ public class PIDController {
         previousTime = currentTime;
         previousError = error;
 
-        double correction = proportional + integral + derivative;
+        double correction = proportional + integral - derivative;
 
         return Math.signum(correction) * Range.clip(Math.abs(correction),
                 lowerOutputBound, higherOutputBound);
@@ -89,6 +89,15 @@ public class PIDController {
     public void setTarget(double target) {
         shouldReset = true;
         this.target = target;
+    }
+    public void setKP(double kP) {
+        this.kP = kP;
+    }
+    public void setKI(double kI) {
+        this.kI = kI;
+    }
+    public void setKD(double kD) {
+        this.kD = kD;
     }
     @NonNull
     public String toString() {
