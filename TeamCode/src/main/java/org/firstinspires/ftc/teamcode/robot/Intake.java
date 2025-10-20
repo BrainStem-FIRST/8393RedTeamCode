@@ -16,19 +16,20 @@ public class Intake {
 
     private IntakeState intakeState;
     private final DcMotorEx intake;
-    private double motorPower;
+    private double desiredMotorPower;
     public Intake(Robot robot) {
         this.robot = robot;
         intakeState = IntakeState.OFF;
         intake = robot.hardwareMap.get(DcMotorEx.class, "intake");
         intake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        motorPower = 0;
+        desiredMotorPower = 0;
     }
     public IntakeState getIntakeState() {
         return intakeState;
     }
     public void update() {
+        double motorPower = desiredMotorPower;
         switch(intakeState) {
             case OFF:
                 if(robot.g1.gamepad.right_trigger > 0.1)
@@ -39,6 +40,8 @@ public class Intake {
             case COLLECTING:
                 if(robot.indexer.getNumBalls() == 3 || !listenCollectInput())
                     setStateOff();
+                else if(Math.abs(robot.indexer.getIndexerError()) > Indexer.errorThreshold * 2)
+                    motorPower = indexIntakePower;
                 break;
         }
         intake.setPower(motorPower);
@@ -46,11 +49,11 @@ public class Intake {
 
     public void setStateOff() {
         intakeState = IntakeState.OFF;
-        motorPower = 0;
+        desiredMotorPower = 0;
     }
     public void setStateCollecting(double power) {
         intakeState = IntakeState.COLLECTING;
-        motorPower = power;
+        desiredMotorPower = power;
     }
 
     private boolean listenCollectInput() {

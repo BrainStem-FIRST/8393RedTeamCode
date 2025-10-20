@@ -56,17 +56,17 @@ public class Shooter {
     // TODO: each position has a different speed and hood position
     public void update() {
         // setting hood position
-        if(robot.g1.isFirstDpadUp())
+        if(robot.g2.isFirstDpadUp())
             hoodServo.setPosition(getHoodPos() + manualHoodInc);
-        else if(robot.g1.isFirstDpadDown())
+        else if(robot.g2.isFirstDpadDown())
             hoodServo.setPosition(getHoodPos() - manualHoodInc);
 
         // setting shooter power
-        if(robot.g1.isFirstY())
+        if(robot.g1.isFirstDpadRight() || robot.g2.isFirstY())
             motorPower += manualShooterInc;
-        else if(robot.g1.isFirstA())
+        else if(robot.g1.isFirstDpadLeft() || robot.g2.isFirstA())
             motorPower -= manualShooterInc;
-        else if(robot.g1.isFirstX())
+        else if(robot.g2.isFirstBack())
             motorPower = 0;
 
 //        // if (robot x is some measurement past goalX && robot y is very different from goalY)

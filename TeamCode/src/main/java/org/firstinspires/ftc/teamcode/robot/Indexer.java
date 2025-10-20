@@ -16,7 +16,7 @@ import org.firstinspires.ftc.teamcode.utils.PIDController;
 @Config
 public class Indexer {
     public static double minPower0Balls = 0.09, minPower3Balls = 0.1;
-    public static double normalMaxIndexerPower = 0.5, shootIndexerMaxPower = 0.4;
+    public static double normalMaxIndexerPower = 0.5, shootMaxIndexerPower = 0.4;
     public static double smallPIDCoefAmp = 3.1, smallPIDActivationRange = 200;
     public static double negIndexerErrorAmp = 1.4;
     public static double kP0Balls = 0.00015, kP3Balls = 0.0002;
@@ -26,6 +26,7 @@ public class Indexer {
     public static double thirdRotateAmount = 2733.333333; // encoders needed to rotate 120 degrees
     public static int errorThreshold = 50;
     public static double transferMoveTime = 0.2, transferStopperMoveTime = 0.05;
+
     private final Robot robot;
     private final CRServo indexer;
     private double currentMaxIndexerPower;
@@ -39,12 +40,6 @@ public class Indexer {
             transferStopperDownPwm = 2300, transferStopperUpPwm = 2450;
     private final ElapsedTime transferTimer; // tracks time spent transferring
 
-    public enum AlignMode {
-        INTAKE, SHOOT
-    }
-
-    private AlignMode alignMode;
-
     public enum TransferState {
         OFF, RESETTING, TRANSFERRING
     }
@@ -54,9 +49,10 @@ public class Indexer {
     private double targetIndexerEncoder;
 
     private final BallColor[] ballColors;
-    private int intakeBallI; // 0-5: represents 6 possible places where ball could be in the indexer
+    private int intakeI; // 0-5: represents 6 possible places where ball could be in the indexer; index 0 is index of central intake spot, indexes increase in clockwise order
     private int numBalls;
-    private final ColorSensorBall leftCS, rightCS, midCS;
+    private final ColorSensorBall leftCS, rightCS, midCS; // color sensors
+    private boolean shouldCheckLeftCS, shouldCheckRightCS, shouldCheckMidCS;
 
     public Indexer(Robot robot) {
         this.robot = robot;
@@ -76,51 +72,75 @@ public class Indexer {
         transferStopper.setPwmRange(new PwmControl.PwmRange(transferStopperDownPwm, transferStopperUpPwm));
 
         transferTimer = new ElapsedTime();
-
-        alignMode = AlignMode.INTAKE;
         transferState = TransferState.OFF;
 
 
         ballColors = new BallColor[] {BallColor.NONE, BallColor.NONE, BallColor.NONE};
-        intakeBallI = 0;
+        intakeI = 0;
         numBalls = 0;
 
         leftCS = new ColorSensorBall(robot, "leftCS");
         rightCS = new ColorSensorBall(robot, "rightCS");
         midCS = new ColorSensorBall(robot, "midCS");
+
+        shouldCheckLeftCS = true;
+        shouldCheckRightCS = true;
+        shouldCheckMidCS = true;
     }
 
     public void update() {
-        leftCS.update();
-        rightCS.update();
-        if(numBalls < 3) {
-            leftCS.getBallColor();
-            rightCS.getBallColor();
-        }
+        updateColorSensors();
         updateIndexer();
         updateTransfer();
     }
-    public BallColor getLeftCSColor() {
-        return leftCS.getBallColor();
-    }
-    public BallColor getRightCSColor() {
-        return rightCS.getBallColor();
-    }
-    private double lerp(double a, double b, double t) {
-        return a + (b-a) * t;
+    private void updateColorSensors() {
+        leftCS.update();
+        rightCS.update();
+        midCS.update();
     }
     private void updateIndexer() {
-        // listening for gamepad input
-        if(robot.g1.isFirstDpadLeft()) {
-            targetIndexerEncoder += thirdRotateAmount/2;
-            currentMaxIndexerPower = normalMaxIndexerPower;
+        // listening for gamepad input to index
+        if(robot.g1.isFirstB()) {
+            rotateIndexerNormal(-1);
         }
-        else if(robot.g1.isFirstDpadRight()) {
-            targetIndexerEncoder -= thirdRotateAmount/2;
-            currentMaxIndexerPower = normalMaxIndexerPower;
+        else if(robot.g1.isFirstA()) {
+            rotateIndexerNormal(1);
         }
-        if(robot.g1.isFirstX())
-            resetIndexerEncoder();
+        // checking for automatic indexing if indexer is pretty much not moving
+        else if(Math.abs(getIndexerError()) < errorThreshold * 2) {
+            // potentially check left and right sensors if indexer is at correct offset
+            if(intakeI % 2 == 1) {
+                boolean ballAtLeft = shouldCheckLeftCS && emptyAt(getLeftIntakeI()) && leftCS.getBallColor() != BallColor.NONE;
+                if (ballAtLeft) {
+                    ballColors[getLeftIntakeI()] = leftCS.getBallColor();
+                    numBalls++;
+                }
+                boolean ballAtRight = shouldCheckRightCS && emptyAt(getRightIntakeI()) && rightCS.getBallColor() != BallColor.NONE;
+                if (ballAtRight) {
+                    ballColors[getRightIntakeI()] = rightCS.getBallColor();
+                    numBalls++;
+                }
+
+                if(ballAtLeft && ballAtRight)
+                    //rotating 180 degrees clockwise
+                    rotateIndexerNormal(3);
+                else if(ballAtLeft)
+                    // rotating 120 degrees clockwise
+                    rotateIndexerNormal(2);
+                else if(ballAtRight)
+                    // rotating 120 degrees counter clockwise
+                    rotateIndexerNormal(-2);
+            }
+            // potentially check middle sensor if indexer at correct offset
+            else {
+                if(shouldCheckMidCS && emptyAt(intakeI) && midCS.getBallColor() != BallColor.NONE) {
+                    ballColors[intakeI] = midCS.getBallColor();
+                    numBalls++;
+                    // rotating 180 degrees clockwise
+                    rotateIndexerNormal(3);
+                }
+            }
+        }
 
         // calculating indexer power
         if(Math.abs(getIndexerEncoder() - targetIndexerEncoder) < errorThreshold)
@@ -132,8 +152,9 @@ public class Indexer {
             indexerPid.setKD(lerp(kD0Balls, kD3Balls, t));
             if(Math.abs(getIndexerEncoder() - targetIndexerEncoder) < smallPIDActivationRange)
                 indexerPid.setKP(indexerPid.getKP() * smallPIDCoefAmp);
+            // TODO: maybe also scale KI
 
-            double error = targetIndexerEncoder - getIndexerEncoder();
+            double error = getIndexerError();
             indexPower = Range.clip(indexerPid.updateWithError(error < 0 ? error * negIndexerErrorAmp : error), -currentMaxIndexerPower, currentMaxIndexerPower);
 
             double minPower = lerp(minPower0Balls, minPower3Balls, t);
@@ -142,6 +163,9 @@ public class Indexer {
         indexer.setPower(indexPower);
 
         //misc
+        if(robot.g1.isFirstX())
+            resetIndexerEncoder();
+
         if(robot.g1.isFirstStart())
             robot.indexer.incNumBalls();
         else if(robot.g1.isFirstBack())
@@ -150,7 +174,7 @@ public class Indexer {
     private void updateTransfer() {
         switch(transferState) {
             case OFF:
-                if(robot.g1.isFirstB())
+                if(robot.g1.gamepad.right_bumper)
                     setTransferTransferring();
                 break;
             case TRANSFERRING:
@@ -162,14 +186,9 @@ public class Indexer {
             case RESETTING:
                 if(transferTimer.seconds() > Math.max(transferStopperMoveTime, transferMoveTime)) {
                     setTransferOff();
-                    targetIndexerEncoder -= thirdRotateAmount;
-                    currentMaxIndexerPower = shootIndexerMaxPower;
+                    rotateIndexerShoot();
                 }
         }
-    }
-    private void resetIndexerEncoder() {
-        indexerEncoder.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        indexerEncoder.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
     }
     private void setTransferTransferring() {
         transferState = TransferState.TRANSFERRING;
@@ -186,6 +205,26 @@ public class Indexer {
     private void setTransferOff() {
         transferState = TransferState.OFF;
     }
+    private void resetIndexerEncoder() {
+        indexerEncoder.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        indexerEncoder.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+    }
+    // positive value = clockwise rotation, vice versa
+    private void rotateIndexerNormal(int sixth) {
+        intakeI = (intakeI - sixth) % 6;
+
+        shouldCheckMidCS = emptyAt(intakeI);
+        shouldCheckLeftCS = emptyAt(getLeftIntakeI());
+        shouldCheckRightCS = emptyAt(getRightIntakeI());
+
+        targetIndexerEncoder -= sixth * thirdRotateAmount/2;
+        currentMaxIndexerPower = normalMaxIndexerPower;
+    }
+    private void rotateIndexerShoot() {
+        intakeI = (intakeI - 2) % 6;
+        targetIndexerEncoder -= 2 * thirdRotateAmount/2;
+        currentMaxIndexerPower = shootMaxIndexerPower;
+    }
     public int getIndexerEncoder() {
         return indexerEncoder.getCurrentPosition();
     }
@@ -201,16 +240,35 @@ public class Indexer {
     public void decNumBalls() {
         numBalls--;
     }
-
     public double getTargetIndexerEncoder() {
         return targetIndexerEncoder;
+    }
+    public double getCurrentIndexerMaxPower() {
+        return currentMaxIndexerPower;
+    }
+    public double getIndexerError() {
+        return targetIndexerEncoder - getIndexerEncoder();
+    }
+    public BallColor getLeftCSColor() {
+        return leftCS.getBallColor();
+    }
+    public BallColor getRightCSColor() {
+        return rightCS.getBallColor();
     }
 
     public TransferState getTransferState() {
         return transferState;
     }
-    public double getCurrentIndexerMaxPower() {
-        return currentMaxIndexerPower;
+    public boolean emptyAt(int i) {
+        return ballColors[i] == BallColor.NONE;
     }
-
+    public int getLeftIntakeI() {
+        return (intakeI + 1) % 6;
+    }
+    public int getRightIntakeI() {
+        return (intakeI - 1) % 6;
+    }
+    private double lerp(double a, double b, double t) {
+        return a + (b-a) * t;
+    }
 }
