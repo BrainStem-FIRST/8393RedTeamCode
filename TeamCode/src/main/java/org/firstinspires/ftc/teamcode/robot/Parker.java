@@ -54,12 +54,11 @@ public class Parker {
     public double getMotorPower() {
         return parkMotor.getPower();
     }
-    public ParkState getState() {
+    public ParkState getParkState() {
         return parkState;
     }
     private double getUpPower() {
         double pidPower = pid.update(getMotorPos());
-        robot.telemetry.addData("pidPower", pidPower);
         return Math.max(minUpPower, pidPower);
     }
     public void _setMotorPower(double power) {

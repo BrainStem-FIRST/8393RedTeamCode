@@ -1,18 +1,16 @@
 package org.firstinspires.ftc.teamcode.utils;
 
-import android.graphics.Color;
-
 import com.qualcomm.robotcore.hardware.ColorSensor;
 
 import org.firstinspires.ftc.teamcode.robot.Robot;
 
 // has caching capability
 public class ColorSensorBall {
-    public static int[] greenBallLow = {2, 6, 0, 0};
-    public static int[] greenBallHigh = {4, 10, 1, 1};
+    public static double[] greenBallLow = {.11, .47, .34, 200};
+    public static double[] greenBallHigh = {.18, .52, .38, 1000};
 
-    public static int[] purpleBallLow = {0, 0, 0, 0};
-    public static int[] purpleBallHigh = {1, 1, 1, 1};
+    public static double[] purpleBallLow = {.20, .27, .40, 200};
+    public static double[] purpleBallHigh = {.25, .34, .48, 1000};
 
     public enum BallColor {
         PURPLE,
@@ -22,7 +20,7 @@ public class ColorSensorBall {
 
     private final ColorSensor colorSensor;
     private boolean updated;
-    private int r, g, b;
+    private double r, g, b;
     public ColorSensorBall(Robot robot, String name) {
         colorSensor = robot.hardwareMap.get(ColorSensor.class, name);
         updated = false;
@@ -48,10 +46,10 @@ public class ColorSensorBall {
     }
 
     private void updateChannels() {
-        int sum = colorSensor.argb();
-        r = Color.red(sum);
-        g = Color.green(sum);
-        b = Color.blue(sum);
+        r = colorSensor.red();
+        g = colorSensor.green();
+        b = colorSensor.blue();
+
         updated = true;
     }
     private boolean inBounds(double low, double val, double high) {
@@ -61,21 +59,24 @@ public class ColorSensorBall {
     private double getRPercent() {
         if(!updated)
             updateChannels();
-        return r * 1. / (r + g + b);
+        return r / getSum();
     }
     private double getGPercent() {
         if(!updated)
             updateChannels();
-        return g * 1. / (r + g + b);
+        return g / getSum();
     }
     private double getBPercent() {
         if(!updated)
             updateChannels();
-        return b * 1. / (r + g + b);
+        return b / getSum();
     }
     private double getSum() {
         if(!updated)
             updateChannels();
         return r + g + b;
+    }
+    public String getRGBS() {
+        return getRPercent() + ", " + getGPercent() + ", " + getBPercent() + ", " + getSum();
     }
 }

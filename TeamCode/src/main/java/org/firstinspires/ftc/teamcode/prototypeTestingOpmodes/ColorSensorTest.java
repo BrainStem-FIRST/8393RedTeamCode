@@ -6,6 +6,12 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 
+import org.firstinspires.ftc.teamcode.robot.Robot;
+import org.firstinspires.ftc.teamcode.utils.ColorSensorBall;
+import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
+
+import java.util.Arrays;
+
 @TeleOp(name="color sensor test")
 public class ColorSensorTest extends LinearOpMode {
     @Override
@@ -13,25 +19,32 @@ public class ColorSensorTest extends LinearOpMode {
         telemetry.setMsTransmissionInterval(11);
         boolean mode = true;
 
-        ColorSensor c1 = hardwareMap.get(ColorSensor.class, "colorSensor1");
-
-
+        GamepadTracker g1 = new GamepadTracker(gamepad1);
+        Robot r = new Robot(hardwareMap, telemetry, g1, new GamepadTracker(gamepad2));
+        ColorSensorBall leftCS = new ColorSensorBall(r, "leftCS");
+        ColorSensorBall rightCS = new ColorSensorBall(r, "rightCS");
 
         waitForStart();
         while(opModeIsActive()) {
+            g1.update();
             double t1 = System.currentTimeMillis();
-            mode = gamepad1.x;
+            if(g1.isFirstX())
+                mode = !mode;
             telemetry.addData("mode", mode);
+
+            leftCS.update();
+            rightCS.update();
             if(mode) {
-                if (gamepad1.a) {
-                    telemetry.addData("c1", c1.red() + ", " + c1.green() + ", " + c1.blue());
-                }
-            }
-            else {
-                if (gamepad1.a) {
-                    int color = c1.argb();
-                    telemetry.addData("c1", Color.red(color) + ", " + Color.green(color) + ", " + Color.blue(color));
-                }
+                telemetry.addData("leftCS color", leftCS.getBallColor());
+                telemetry.addData("rightCS color", rightCS.getBallColor());
+                telemetry.addData("left CS rgb", leftCS.getRGBS());
+                telemetry.addData("right CS rgb", rightCS.getRGBS());
+                telemetry.addData("min green", Arrays.toString(ColorSensorBall.greenBallLow));
+                telemetry.addData("max green", Arrays.toString(ColorSensorBall.greenBallHigh));
+                telemetry.addLine();
+
+                telemetry.addData("min purple", Arrays.toString(ColorSensorBall.purpleBallLow));
+                telemetry.addData("max purple", Arrays.toString(ColorSensorBall.purpleBallHigh));
             }
 
             double t2 = System.currentTimeMillis();

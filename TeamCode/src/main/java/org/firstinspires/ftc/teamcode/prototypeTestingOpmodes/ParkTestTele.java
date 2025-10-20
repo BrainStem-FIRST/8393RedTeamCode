@@ -34,7 +34,7 @@ public class ParkTestTele extends LinearOpMode {
             telemetry.addData("testing mode on", testing);
             telemetry.addData("park encoder", robot.parker.getMotorPos());
             telemetry.addData("park power", robot.parker.getMotorPower());
-            telemetry.addData("park state", robot.parker.getState());
+            telemetry.addData("park state", robot.parker.getParkState());
             telemetry.update();
         }
     }

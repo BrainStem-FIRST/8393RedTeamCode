@@ -41,7 +41,7 @@ public class PIDController {
         return Range.clip(updateWithError(error), lowerOutputBound, higherOutputBound);
     }
 
-    private double updateWithError(double error) {
+    public double updateWithError(double error) {
         if (Double.isNaN(error) || Double.isInfinite(error))
             return 0;
 

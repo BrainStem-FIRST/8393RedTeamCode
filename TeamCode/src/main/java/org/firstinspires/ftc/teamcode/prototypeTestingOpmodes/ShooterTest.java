@@ -21,8 +21,6 @@ public class ShooterTest extends LinearOpMode {
         GamepadTracker g2 = new GamepadTracker(gamepad2);
         Robot robot = new Robot(hardwareMap, telemetry, g1, g2);
         robot.initPedroTele();
-        boolean testing = true;
-        double inc = 0.02;
         waitForStart();
         while(opModeIsActive()) {
             g1.update();
@@ -30,34 +28,10 @@ public class ShooterTest extends LinearOpMode {
             robot.intake.update();
             robot.indexer.update();
 
-            if(testing) {
-                // moving shooter
-                if(g1.isFirstY())
-                    robot.shooter._setShooterPower(robot.shooter.getShooterPower()+inc);
-                else if(g1.isFirstA())
-                    robot.shooter._setShooterPower(robot.shooter.getShooterPower()-inc);
-                else if(g1.isFirstX())
-                    robot.shooter._setShooterPower(0);
+            robot.shooter.update();
+            telemetry.addData("shooter state", robot.shooter.getState());
 
-                // moving pivot
-                if(gamepad1.dpad_up)
-                    robot.shooter._setHoodPower(0.1);
-                else if(gamepad1.dpad_down)
-                    robot.shooter._setHoodPower(-0.1);
-                else
-                    robot.shooter._setHoodPower(0);
-
-                // moving transfer
-                if(gamepad1.right_bumper)
-                    robot.indexer._setTransferPower(robot.indexer.getTransferPower() == 0 ? -0.99 :0);
-            }
-            else {
-                robot.shooter.update();
-                telemetry.addData("shooter state", robot.shooter.getState());
-            }
             telemetry.addData("shooter power", robot.shooter.getShooterPower());
-            telemetry.addData("hood power", robot.shooter._getHoodPower());
-            telemetry.addData("transfer power", robot.indexer.getTransferPower());
             telemetry.update();
         }
     }

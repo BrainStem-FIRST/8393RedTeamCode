@@ -3,10 +3,10 @@ package org.firstinspires.ftc.teamcode.robot;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.PwmControl;
 import com.qualcomm.robotcore.hardware.ServoImplEx;
 
 public class Shooter {
-
     public static final double triggerPressThreshold = 0.1;
     public static final double shootPowerFar = 0.725;
     public static final double shootPowerNL = 0.6; //TODO: what works best here?
@@ -15,6 +15,10 @@ public class Shooter {
     public static final double hoodPositionFar = 0.0; //TODO: ?
     public static final double hoodPositionNL = 0.0; //TODO: ?
     public static final double hoodPositionNR = 0.0; //TODO: ?
+
+    public static double minVelPowerCorrespondence = 0.9;
+    public static int minHoodPwm = 1440, maxHoodPwm = 1010;
+    public static double manualHoodInc = 0.02, manualShooterInc = 0.02;
     private final Robot robot;
 
     // SHOOTING: motor is running to shoot the balls from the indexer
@@ -26,7 +30,7 @@ public class Shooter {
     private final DcMotorEx motor1;
     private final DcMotorEx motor2;
 
-    private final CRServo hoodServo;
+    private final ServoImplEx hoodServo;
 
     // NL and NR signify the left and right near positions
     private double motorPower;
@@ -43,29 +47,40 @@ public class Shooter {
         motor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motor2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        hoodServo = robot.hardwareMap.get(CRServo.class, "hoodServo");
-       // hoodServo.setPwmRange(); //TODO: set range
+        hoodServo = robot.hardwareMap.get(ServoImplEx.class, "hoodServo");
+        hoodServo.setPwmRange(new PwmControl.PwmRange(minHoodPwm, maxHoodPwm));
 
         motorPower = 0;
     }
 
     // TODO: each position has a different speed and hood position
     public void update() {
+        // setting hood position
+        if(robot.g1.isFirstDpadUp())
+            hoodServo.setPosition(getHoodPos() + manualHoodInc);
+        else if(robot.g1.isFirstDpadDown())
+            hoodServo.setPosition(getHoodPos() - manualHoodInc);
 
-        // if (robot x is some measurement past goalX && robot y is very different from goalY)
-            setStateShooting(shootPowerFar, hoodPositionFar);
-        // else if (robot x is some measurement past goalX && robot y is closeish to goalY)
-            setStateShooting(shootPowerNL, hoodPositionNL);
-        // else if (robot x is more than the past measurements past goalX && robot y is closeish to goalY)
-            setStateShooting(shootPowerNR, hoodPositionNR);
+        // setting shooter power
+        if(robot.g1.isFirstY())
+            motorPower += manualShooterInc;
+        else if(robot.g1.isFirstA())
+            motorPower -= manualShooterInc;
+        else if(robot.g1.isFirstX())
+            motorPower = 0;
+
+//        // if (robot x is some measurement past goalX && robot y is very different from goalY)
+//            setStateShooting(shootPowerFar, hoodPositionFar);
+//        // else if (robot x is some measurement past goalX && robot y is closeish to goalY)
+//            setStateShooting(shootPowerNL, hoodPositionNL);
+//        // else if (robot x is more than the past measurements past goalX && robot y is closeish to goalY)
+//            setStateShooting(shootPowerNR, hoodPositionNR);
 
         setShooterPower(motorPower);
     }
-
-//    private void setStateOff(){
-//        state = State.OFF;
-//        motorPower = 0;
-//    }
+    public double getHoodPos() {
+        return hoodServo.getPosition();
+    }
 
     private void setStateShooting(double power, double position){
         state = State.SHOOTING;
@@ -78,7 +93,7 @@ public class Shooter {
 
     private void setShooterPower(double power) {
         motor1.setPower(power);
-        motor2.setPower(power);
+        motor2.setPower(-power);
     }
     private int getMotor1Pos() {
         return motor1.getCurrentPosition();
@@ -90,12 +105,6 @@ public class Shooter {
         return state;
     }
 
-    public void _setHoodPower(double power) {
-        hoodServo.setPower(power);
-    }
-    public double _getHoodPower() {
-        return hoodServo.getPower();
-    }
     public void _setShooterPower(double power) {
         motor1.setPower(power);
         motor2.setPower(-power);
