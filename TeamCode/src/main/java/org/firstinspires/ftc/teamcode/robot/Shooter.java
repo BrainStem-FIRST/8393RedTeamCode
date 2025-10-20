@@ -69,12 +69,18 @@ public class Shooter {
         else if(robot.g2.isFirstBack())
             motorPower = 0;
 
-//        // if (robot x is some measurement past goalX && robot y is very different from goalY)
-//            setStateShooting(shootPowerFar, hoodPositionFar);
-//        // else if (robot x is some measurement past goalX && robot y is closeish to goalY)
-//            setStateShooting(shootPowerNL, hoodPositionNL);
-//        // else if (robot x is more than the past measurements past goalX && robot y is closeish to goalY)
-//            setStateShooting(shootPowerNR, hoodPositionNR);
+        if (robot.follower.getPose().getX() - robot.goalX > 10
+                && robot.follower.getPose().getX() - robot.goalY > 50) { //TODO: fix for far position
+            setStateShooting(shootPowerFar, hoodPositionFar);
+
+        } else if (robot.follower.getPose().getX() - robot.goalX > 10
+            && robot.follower.getPose().getX() - robot.goalY > 50) { //TODO: fix for near left position
+            setStateShooting(shootPowerNL, hoodPositionNL);
+
+        } else if (robot.follower.getPose().getX() - robot.goalX > 10
+            && robot.follower.getPose().getX() - robot.goalY > 50) { //TODO: fix for near right position
+            setStateShooting(shootPowerNR, hoodPositionNR);
+        }
 
         setShooterPower(motorPower);
     }
@@ -85,10 +91,6 @@ public class Shooter {
     private void setStateShooting(double power, double position){
         state = State.SHOOTING;
         motorPower = power;
-    }
-    private boolean shootTriggerPressed() { //TODO: maybe delete? since it's always spinning
-        // checking in-taking
-        return robot.g1.gamepad.right_trigger > triggerPressThreshold;
     }
 
     private void setShooterPower(double power) {
