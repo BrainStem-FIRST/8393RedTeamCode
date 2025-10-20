@@ -13,9 +13,9 @@ public class ColorSensorBall {
     public static double[] purpleBallHigh = {.25, .34, .48, 1000};
 
     public enum BallColor {
-        PURPLE,
-        GREEN,
-        NONE
+        P, // purple
+        G, // green
+        N // none
     }
 
     private final ColorSensor colorSensor;
@@ -34,15 +34,15 @@ public class ColorSensorBall {
                 && inBounds(greenBallLow[1], getGPercent(), greenBallHigh[1])
                 && inBounds(greenBallLow[2], getBPercent(), greenBallHigh[2])
                 && inBounds(greenBallLow[3], getSum(), greenBallHigh[3]))
-            return BallColor.GREEN;
+            return BallColor.G;
 
         if(inBounds(purpleBallLow[0], getRPercent(), purpleBallHigh[0])
                 && inBounds(purpleBallLow[1], getGPercent(), purpleBallHigh[1])
                 && inBounds(purpleBallLow[2], getBPercent(), purpleBallHigh[2])
                 && inBounds(purpleBallLow[3], getSum(), purpleBallHigh[3]))
-            return BallColor.PURPLE;
+            return BallColor.P;
 
-        return BallColor.NONE;
+        return BallColor.N;
     }
 
     private void updateChannels() {

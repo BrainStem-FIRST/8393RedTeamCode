@@ -25,9 +25,6 @@ public class Intake {
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         desiredMotorPower = 0;
     }
-    public IntakeState getIntakeState() {
-        return intakeState;
-    }
     public void update() {
         double motorPower = desiredMotorPower;
         switch(intakeState) {
@@ -40,7 +37,7 @@ public class Intake {
             case COLLECTING:
                 if(robot.indexer.getNumBalls() == 3 || !listenCollectInput())
                     setStateOff();
-                else if(Math.abs(robot.indexer.getIndexerError()) > Indexer.errorThreshold * 2)
+                else if(!robot.indexer.prettyMuchStatic())
                     motorPower = indexIntakePower;
                 break;
         }
@@ -55,7 +52,12 @@ public class Intake {
         intakeState = IntakeState.COLLECTING;
         desiredMotorPower = power;
     }
-
+    public IntakeState getIntakeState() {
+        return intakeState;
+    }
+    public double getIntakePower() {
+        return intake.getPower();
+    }
     private boolean listenCollectInput() {
         return robot.g1.gamepad.right_trigger > 0.1;
     }
