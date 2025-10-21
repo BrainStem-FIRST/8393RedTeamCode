@@ -18,30 +18,30 @@ public class Indexer {
     public static class Params {
         public int greenPos = 0; // ranges 0-2 (0=green should be shot first, 2=green should be shot last)
 
-        public double minPower0Balls = 0.09, minPower3Balls = 0.1;
-        public double normalMaxIndexerPower = 0.5, shootMaxIndexerPower = 0.4;
-        public double smallPIDCoefAmp = 3.1, smallPIDActivationRange = 200;
-        public double negIndexerErrorAmp = 1.4;
-        public double kP0Balls = 0.00015, kP3Balls = 0.0002;
-        public double kI0Balls = 0, kI3Balls = 0.0001;
+        public double minPower0Balls = 0.1, minPower3Balls = 0.11;
+        public double normalMaxIndexerPower0 = 0.5, shootMaxIndexerPower0 = 0.4;
+        public double normalMaxIndexerPower3 = 0.6, shootMaxIndexerPower3 = 0.5;
+        public double smallPIDCoefAmp = 1, smallPIDActivationRange = 300;
+        public double negIndexerErrorAmp = 1.1;
+        public double kP0Balls = 0.00015, kP3Balls = 0.00015;
+        public double kI0Balls = 0, kI3Balls = 0;
         public double kD0Balls = 0, kD3Balls = 0;
         public double thirdRotateAmount = 2733.333333; // encoders needed to rotate 120 degrees
         public int errorThreshold = 50;
         public double transferMoveTime = 0.2, transferStopperMoveTime = 0.05;
-        public double indexMatterTime = 90; // in seconds
     }
     public static Params params = new Params();
 
     private final Robot robot;
     private final CRServo indexer;
-    private double currentMaxIndexerPower;
+    private boolean useNormalMaxPower;
     private final PIDController indexerPid;
     private double indexPower;
 
     private final ServoImplEx transfer;
     public static int transferInPwm = 620, transferShootPwm = 850;
     private final ServoImplEx transferStopper;
-    public static int transferStopperDownPwm = 2300, transferStopperUpPwm = 2450;
+    public static int transferStopperDownPwm = 2310, transferStopperUpPwm = 2450;
     private final ElapsedTime transferTimer; // tracks time spent transferring
 
     public enum TransferState {
@@ -70,7 +70,7 @@ public class Indexer {
         resetIndexerEncoder();
         targetIndexerEncoder = 0;
         indexerPid = new PIDController(params.kP0Balls, params.kI0Balls, params.kD0Balls);
-        currentMaxIndexerPower = params.normalMaxIndexerPower;
+        useNormalMaxPower = true;
 
         transfer = robot.hardwareMap.get(ServoImplEx.class, "transfer");
         transfer.setPwmRange(new PwmControl.PwmRange(transferInPwm, transferShootPwm));
@@ -171,12 +171,12 @@ public class Indexer {
             indexerPid.setKP(lerp(params.kP0Balls, params.kP3Balls, t));
             indexerPid.setKI(lerp(params.kI0Balls, params.kI3Balls, t));
             indexerPid.setKD(lerp(params.kD0Balls, params.kD3Balls, t));
-            if(Math.abs(getIndexerEncoder() - targetIndexerEncoder) < params.smallPIDActivationRange)
-                indexerPid.setKP(indexerPid.getKP() * params.smallPIDCoefAmp);
-            // TODO: maybe also scale KI
 
             double error = getIndexerError();
-            indexPower = Range.clip(indexerPid.updateWithError(error < 0 ? error * params.negIndexerErrorAmp : error), -currentMaxIndexerPower, currentMaxIndexerPower);
+            if(Math.abs(error) < params.smallPIDActivationRange)
+                indexerPid.setKP(indexerPid.getKP() * params.smallPIDCoefAmp);
+            double max = useNormalMaxPower ? lerp(params.normalMaxIndexerPower0, params.normalMaxIndexerPower3, t) : lerp(params.shootMaxIndexerPower0, params.shootMaxIndexerPower3, t);
+            indexPower = Range.clip(indexerPid.updateWithError(error < 0 ? error * params.negIndexerErrorAmp : error), -max, max);
 
             double minPower = lerp(params.minPower0Balls, params.minPower3Balls, t);
             indexPower = Math.signum(indexPower) * Math.max(minPower, Math.abs(indexPower));
@@ -184,9 +184,6 @@ public class Indexer {
         indexer.setPower(indexPower);
 
         //misc
-        if(robot.g2.isFirstStart())
-            autoIndexToPattern = !autoIndexToPattern;// don't actually use this YET
-
         if(robot.g1.isFirstStart())
             robot.indexer.incNumBalls();
         else if(robot.g1.isFirstBack())
@@ -195,7 +192,7 @@ public class Indexer {
     private void updateTransfer() {
         switch(transferState) {
             case OFF:
-                if(robot.g1.gamepad.right_bumper && prettyMuchStatic())
+                if(robot.g1.gamepad.right_bumper)
                     setTransferTransferring();
                 break;
             case TRANSFERRING:
@@ -240,7 +237,7 @@ public class Indexer {
     }
     // positive value = clockwise rotation, vice versa
     private void rotateIndexer(int sixth) {
-        intakeI = (intakeI - sixth) % 6;
+        intakeI = (intakeI - sixth + 6) % 6;
         targetIndexerEncoder -= sixth * params.thirdRotateAmount/2;
 
         shouldCheckMidCS = emptyAt(intakeI);
@@ -249,7 +246,7 @@ public class Indexer {
     }
     private void rotateIndexerNormal(int sixth) {
         rotateIndexer(sixth);
-        currentMaxIndexerPower = params.normalMaxIndexerPower;
+        useNormalMaxPower = true;
     }
 
     private void rotateIndexerShoot() {
@@ -258,9 +255,8 @@ public class Indexer {
             numBalls = Math.max(numBalls-1, 0);
             ballColors[getShooterI()] = BallColor.N;
             rotateIndexer(getAlignIndexerOffset());
-            currentMaxIndexerPower = params.shootMaxIndexerPower;
+            useNormalMaxPower = false;
         }
-
     }
     public int getIndexerEncoder() {
         return indexerEncoder.getCurrentPosition();
@@ -280,8 +276,8 @@ public class Indexer {
     public double getTargetIndexerEncoder() {
         return targetIndexerEncoder;
     }
-    public double getCurrentIndexerMaxPower() {
-        return currentMaxIndexerPower;
+    public boolean useNormalMaxPower() {
+        return useNormalMaxPower;
     }
     public double getIndexerError() {
         return targetIndexerEncoder - getIndexerEncoder();
@@ -311,17 +307,19 @@ public class Indexer {
         return (intakeI + 1) % 6;
     }
     public int getRightIntakeI() {
-        return (intakeI - 1) % 6;
+        return (intakeI + 5) % 6;
     }
     public int getShooterI() {
         return (intakeI + 3) % 6;
     }
     public int findBallI(BallColor ballColor) {
         for(int i = 0; i < 4; i++) {
-            if(getBallAt(getShooterI()-i) == ballColor)
-                return getShooterI()-i;
-            if(getBallAt(getShooterI()+i) == ballColor)
-                return getShooterI()+i;
+            int index = (getShooterI() - i + 6) % 6;
+            if(getBallAt(index) == ballColor)
+                return index;
+            index = (getShooterI() + i) % 6;
+            if(getBallAt(index) == ballColor)
+                return index;
         }
         return -1;
     }

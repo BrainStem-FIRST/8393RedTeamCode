@@ -11,7 +11,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 
 public class Robot {
-    public double goalX, goalY;
+    public double goalX = 72, goalY = 68;
     public final HardwareMap hardwareMap;
     public final Telemetry telemetry;
     public final GamepadTracker g1, g2;
@@ -37,7 +37,7 @@ public class Robot {
         follower = Constants.createFollower(hardwareMap);
     }
     public void initPedroTele() {
-        follower.setStartingPose(new Pose(0, 0, 0));
+        follower.setStartingPose(new Pose(-65.025, 9, 0));
         follower.startTeleopDrive();
         follower.update();
     }

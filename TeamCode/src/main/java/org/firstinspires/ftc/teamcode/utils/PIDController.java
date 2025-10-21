@@ -65,7 +65,7 @@ public class PIDController {
         previousTime = currentTime;
         previousError = error;
 
-        double correction = proportional + integral - derivative;
+        double correction = proportional + integral + derivative;
 
         return Math.signum(correction) * Range.clip(Math.abs(correction),
                 lowerOutputBound, higherOutputBound);

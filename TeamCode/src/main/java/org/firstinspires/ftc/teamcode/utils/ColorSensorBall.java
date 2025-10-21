@@ -1,16 +1,20 @@
 package org.firstinspires.ftc.teamcode.utils;
 
+import android.graphics.Color;
+
 import com.qualcomm.robotcore.hardware.ColorSensor;
 
 import org.firstinspires.ftc.teamcode.robot.Robot;
 
 // has caching capability
 public class ColorSensorBall {
-    public static double[] greenBallLow = {.11, .47, .34, 200};
-    public static double[] greenBallHigh = {.18, .52, .38, 1000};
+    public static double[] normalGreenBallLow = {.11, .47, .34, 200};
+    public static double[] normalGreenBallHigh = {.18, .52, .38, 10000};
+    public static double[] normalPurpleBallLow = {.20, .27, .40, 200};
+    public static double[] normalPurpleBallHigh = {.26, .34, .48, 10000};
 
-    public static double[] purpleBallLow = {.20, .27, .40, 200};
-    public static double[] purpleBallHigh = {.25, .34, .48, 1000};
+
+    private double[] greenBallLow, greenBallHigh, purpleBallLow, purpleBallHigh;
 
     public enum BallColor {
         P, // purple
@@ -24,6 +28,10 @@ public class ColorSensorBall {
     public ColorSensorBall(Robot robot, String name) {
         colorSensor = robot.hardwareMap.get(ColorSensor.class, name);
         updated = false;
+        greenBallLow = normalGreenBallLow;
+        greenBallHigh = normalGreenBallHigh;
+        purpleBallLow = normalPurpleBallLow;
+        purpleBallHigh = normalPurpleBallHigh;
     }
 
     public void update() {

@@ -23,6 +23,7 @@ public class ColorSensorTest extends LinearOpMode {
         Robot r = new Robot(hardwareMap, telemetry, g1, new GamepadTracker(gamepad2));
         ColorSensorBall leftCS = new ColorSensorBall(r, "leftCS");
         ColorSensorBall rightCS = new ColorSensorBall(r, "rightCS");
+        ColorSensorBall midCS = new ColorSensorBall(r, "midCS");
 
         waitForStart();
         while(opModeIsActive()) {
@@ -34,17 +35,17 @@ public class ColorSensorTest extends LinearOpMode {
 
             leftCS.update();
             rightCS.update();
+            midCS.update();
             if(mode) {
                 telemetry.addData("leftCS color", leftCS.getBallColor());
-                telemetry.addData("rightCS color", rightCS.getBallColor());
                 telemetry.addData("left CS rgb", leftCS.getRGBS());
-                telemetry.addData("right CS rgb", rightCS.getRGBS());
-                telemetry.addData("min green", Arrays.toString(ColorSensorBall.greenBallLow));
-                telemetry.addData("max green", Arrays.toString(ColorSensorBall.greenBallHigh));
                 telemetry.addLine();
-
-                telemetry.addData("min purple", Arrays.toString(ColorSensorBall.purpleBallLow));
-                telemetry.addData("max purple", Arrays.toString(ColorSensorBall.purpleBallHigh));
+                telemetry.addData("rightCS color", rightCS.getBallColor());
+                telemetry.addData("right CS rgb", rightCS.getRGBS());
+                telemetry.addLine();
+                telemetry.addData("midCS color", midCS.getBallColor());
+                telemetry.addData("mid CS rgb", midCS.getRGBS());
+                telemetry.addLine();
             }
 
             double t2 = System.currentTimeMillis();
