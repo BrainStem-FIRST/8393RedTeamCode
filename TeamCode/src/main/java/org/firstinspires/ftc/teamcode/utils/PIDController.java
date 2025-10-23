@@ -6,8 +6,8 @@ public class PIDController {
     protected double target;
     protected double kP, kI, kD;
     protected double proportional, integral, derivative;
+    protected double powerOffset;
     protected boolean shouldReset;
-
     protected double previousTime, previousError;
 
     protected double lowerInputBound = Double.NEGATIVE_INFINITY, higherInputBound = Double.POSITIVE_INFINITY;
@@ -18,6 +18,7 @@ public class PIDController {
         this.kI = kI;
         this.kD = kD;
         shouldReset = true;
+        powerOffset = 0;
     }
 
     public void setInputBounds(double lowerInputBound, double higherInputBound) {
@@ -65,7 +66,7 @@ public class PIDController {
         previousTime = currentTime;
         previousError = error;
 
-        double correction = proportional + integral + derivative;
+        double correction = proportional + integral + derivative + powerOffset;
 
         return Math.signum(correction) * Range.clip(Math.abs(correction),
                 lowerOutputBound, higherOutputBound);
@@ -81,6 +82,9 @@ public class PIDController {
     }
     public double getKD() {
         return kD;
+    }
+    public double getPowerOffset() {
+        return powerOffset;
     }
     // the target position of motor
     public double getTarget() {
@@ -99,8 +103,18 @@ public class PIDController {
     public void setKD(double kD) {
         this.kD = kD;
     }
+    public void setPowerOffset(double powerOffset) {
+        this.powerOffset = powerOffset;
+    }
+    public void set(PIDController other) {
+        kP = other.kP;
+        kI = other.kI;
+        kD = other.kD;
+        powerOffset = other.powerOffset;
+        shouldReset = true;
+    }
     @NonNull
     public String toString() {
-        return "kP:" + kP + " | kI: " + kI + " | kD: " + kD;
+        return "kP:" + kP + " | kI: " + kI + " | kD: " + kD + " | pOffset: " + powerOffset;
     }
 }

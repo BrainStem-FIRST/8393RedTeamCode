@@ -37,8 +37,6 @@ public class Intake {
             case COLLECTING:
                 if(robot.indexer.getNumBalls() == 3 || !listenCollectInput())
                     setStateOff();
-                else if(!robot.indexer.prettyMuchStatic())
-                    motorPower = indexIntakePower;
                 break;
         }
         intake.setPower(motorPower);

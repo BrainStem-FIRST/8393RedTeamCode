@@ -18,6 +18,7 @@ public class MainTestTele extends LinearOpMode {
         robot.initPedroTele();
         waitForStart();
         ElapsedTime timer = new ElapsedTime();
+        double prevSec = 0;
         while (opModeIsActive()) {
             g1.update();
             g2.update();
@@ -26,56 +27,56 @@ public class MainTestTele extends LinearOpMode {
             robot.shooter.update(timer.seconds());
             robot.updatePedroTele();
 
-            telemetry.addData("timer seconds", timer.seconds());
+            telemetry.addData("fps", 1/(timer.seconds()-prevSec));
+//            telemetry.addLine("SUBSYSTEM STATES---------------");
+//            telemetry.addData("  intake state", robot.intake.getIntakeState());
+//            telemetry.addData("  parker state", robot.parker.getParkState());
+//            telemetry.addData("  transfer state", robot.indexer.getTransferState());
+//            telemetry.addLine();
+
+            telemetry.addLine("INDEXER SPECIFIC----");
+            telemetry.addData("pid selected", robot.indexer.getPidSelected());
+            telemetry.addData("  indexer encoder", robot.indexer.getIndexerEncoder());
+            telemetry.addData("  indexer target", robot.indexer.getTargetIndexerEncoder());
+            telemetry.addData("  indexer error", robot.indexer.getIndexerError());
+            telemetry.addData("  indexer power", robot.indexer.getIndexerPower());
+            telemetry.addData("  pretty much static", robot.indexer.prettyMuchStatic());
+            telemetry.addData("  num balls", robot.indexer.getNumBalls());
+            telemetry.addData("  indexer vel", robot.indexer.getIndexerVel());
+            telemetry.addLine();
+            telemetry.addData("  ballList", robot.indexer.getLabeledBalls());
+            telemetry.addData("  sc left, mid, right", robot.indexer.shouldCheckLeftCS() + ", " + robot.indexer.shouldCheckMidCS() + ", " + robot.indexer.shouldCheckRightCS());
+            telemetry.addData("  ballAt left, mid, right", robot.indexer.isBallAtLeft() + ", " + robot.indexer.isBallAtMid() + ", " + robot.indexer.isBallAtRight());
+            telemetry.addData("  left, mid, right CS ball color", robot.indexer.getLeftCSColor() + ", " + robot.indexer.getMidCSColor() + ", " + robot.indexer.getRightCSColor());
+            telemetry.addData("  intakeI, li, ri, si", robot.indexer.getIntakeI() + ", " + robot.indexer.getLeftIntakeI() + ", " + robot.indexer.getRightIntakeI() + ", " + robot.indexer.getShooterI());
+            telemetry.addData("  should auto rotate", robot.indexer.isShouldAutoIndexToPattern());
+            telemetry.addData("  auto rotate cued", robot.indexer.isAutoRotateCued());
+            telemetry.addData("  auto index timer", robot.indexer.autoIndexCueTime());
+
+            telemetry.addLine();
             telemetry.addLine("SHOOTER SPECIFIC----");
+            telemetry.addData("should shoot", robot.shooter.getShouldShoot());
             telemetry.addData("  shooter power", robot.shooter.getShooterPower());
             telemetry.addData("  target power", robot.shooter.getTargetMotorPower());
             telemetry.addData("  shooter velocity", robot.shooter.getShooterVelocity());
             telemetry.addData("  target vel", robot.shooter.getTargetMotorVel());
             telemetry.addData("  hood position", robot.shooter.getHoodPos());
             telemetry.addData("  robot dist", Math.sqrt(Math.pow(robot.follower.getPose().getX() - robot.goalX, 2) + Math.pow(robot.follower.getPose().getY() - robot.goalY, 2)));
+            telemetry.addData("  shooter miliamp", robot.shooter.getShooterMiliAmps());
 
-            telemetry.addLine("SUBSYSTEM STATES---------------");
-            telemetry.addData("  intake state", robot.intake.getIntakeState());
-            telemetry.addData("  parker state", robot.parker.getParkState());
-            telemetry.addData("  transfer state", robot.indexer.getTransferState());
-            telemetry.addLine();
-
-            telemetry.addLine("INDEXER SPECIFIC----");
-            telemetry.addData("  indexer encoder", robot.indexer.getIndexerEncoder());
-            telemetry.addData("  indexer target", robot.indexer.getTargetIndexerEncoder());
-            telemetry.addData("  indexer error", robot.indexer.getIndexerError());
-            telemetry.addData("  indexer power", robot.indexer.getIndexerPower());
-            telemetry.addData("  use normal max power", robot.indexer.useNormalMaxPower());
-            telemetry.addData("  pretty much static", robot.indexer.prettyMuchStatic());
-            telemetry.addData("  num balls", robot.indexer.getNumBalls());
-            telemetry.addLine();
-            telemetry.addData("  left CS ball color", robot.indexer.getLeftCSColor());
-            telemetry.addData("  mid CS ball color", robot.indexer.getMidCSColor());
-            telemetry.addData("  right CS ball color", robot.indexer.getRightCSColor());
-            telemetry.addData("  sc leftCS", robot.indexer.shouldCheckLeftCS());
-            telemetry.addData("  sc midCS", robot.indexer.shouldCheckMidCS());
-            telemetry.addData("  sc rightCS", robot.indexer.shouldCheckRightCS());
-            telemetry.addData("  ballList", robot.indexer.getBallAt(0) + ", " + robot.indexer.getBallAt(1)
-                                                + ", " + robot.indexer.getBallAt(2) + ", " + robot.indexer.getBallAt(3)
-                                                + ", " + robot.indexer.getBallAt(4) + ", " + robot.indexer.getBallAt(5));
-            telemetry.addData("  intakeI, li, ri, si", robot.indexer.getIntakeI() + ", " + robot.indexer.getLeftIntakeI() + ", " + robot.indexer.getRightIntakeI() + ", " + robot.indexer.getShooterI());
-//            telemetry.addData("  indexer align offset", robot.indexer.getAlignIndexerOffset());
-            telemetry.addData("  cur patternI", robot.indexer.getCurPatternI());
-
-            telemetry.addLine();
-            telemetry.addLine();
-            telemetry.addLine("INTAKE SPECIFIC-----");
-            telemetry.addData("  power", robot.intake.getIntakePower());
-
-            telemetry.addLine("PARK SPECIFIC----");
-            telemetry.addData("park encoder", robot.parker.getMotorPos());
-
-            telemetry.addLine("PEDRO SPECIFIC----");
-            telemetry.addData("  x", robot.follower.getPose().getX());
-            telemetry.addData("  y", robot.follower.getPose().getY());
-            telemetry.addData("  heading (deg)", robot.follower.getPose().getHeading()*180/Math.PI);
+//            telemetry.addLine();
+//            telemetry.addLine("INTAKE SPECIFIC-----");
+//            telemetry.addData("  power", robot.intake.getIntakePower());
+//
+//            telemetry.addLine("PARK SPECIFIC----");
+//            telemetry.addData("park encoder", robot.parker.getMotorPos());
+//
+//            telemetry.addLine("PEDRO SPECIFIC----");
+//            telemetry.addData("  x", robot.follower.getPose().getX());
+//            telemetry.addData("  y", robot.follower.getPose().getY());
+//            telemetry.addData("  heading (deg)", robot.follower.getPose().getHeading()*180/Math.PI);
             telemetry.update();
+            prevSec = timer.seconds();
         }
     }
 }

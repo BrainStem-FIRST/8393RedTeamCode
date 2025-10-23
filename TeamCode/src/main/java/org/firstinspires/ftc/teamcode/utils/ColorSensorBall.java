@@ -10,8 +10,8 @@ import org.firstinspires.ftc.teamcode.robot.Robot;
 public class ColorSensorBall {
     public static double[] normalGreenBallLow = {.11, .47, .34, 200};
     public static double[] normalGreenBallHigh = {.18, .52, .38, 10000};
-    public static double[] normalPurpleBallLow = {.20, .27, .40, 200};
-    public static double[] normalPurpleBallHigh = {.26, .34, .48, 10000};
+    public static double[] normalPurpleBallLow = {.20, .26, .42, 200};
+    public static double[] normalPurpleBallHigh = {.26, .30, .48, 10000};
 
 
     private double[] greenBallLow, greenBallHigh, purpleBallLow, purpleBallHigh;

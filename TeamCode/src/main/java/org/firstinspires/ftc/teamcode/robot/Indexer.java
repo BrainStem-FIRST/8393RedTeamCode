@@ -16,18 +16,20 @@ import org.firstinspires.ftc.teamcode.utils.PIDController;
 @Config
 public class Indexer {
     public static class Params {
+        public double indexerVelocityStaticThreshold = 1, prettyMuchStatic = 200;
         public int greenPos = 0; // ranges 0-2 (0=green should be shot first, 2=green should be shot last)
-
-        public double minPower0Balls = 0.1, minPower3Balls = 0.11;
-        public double normalMaxIndexerPower0 = 0.5, shootMaxIndexerPower0 = 0.4;
-        public double normalMaxIndexerPower3 = 0.6, shootMaxIndexerPower3 = 0.5;
-        public double smallPIDCoefAmp = 1, smallPIDActivationRange = 300;
-        public double negIndexerErrorAmp = 1.1;
-        public double kP0Balls = 0.00015, kP3Balls = 0.00015;
-        public double kI0Balls = 0, kI3Balls = 0;
-        public double kD0Balls = 0, kD3Balls = 0;
+        public double csResponseDelay = 0;
+        public double minPowerWeak = 0.08, minPowerNorm = 0.09, offsetMaxPower = 0.4, maxPower = 0.5;
+        public double negIndexerErrorAmp = 1.5, negErrorAmpActivateRange = 600;
+        public double pidPowerOffset = 0.05;
+        public double kPNorm = 0.00015;
+        public double kI = 0.000001;
+        public double kD = 0;
+        public double kPWeak = 0.0001;
+        public double kPWeakNorm = 0.00013;
+        public double kPStrong = 0.00018;
         public double thirdRotateAmount = 2733.333333; // encoders needed to rotate 120 degrees
-        public int errorThreshold = 50;
+        public int errorThreshold = 75;
         public double transferMoveTime = 0.2, transferStopperMoveTime = 0.05;
     }
     public static Params params = new Params();
@@ -36,7 +38,10 @@ public class Indexer {
     private final CRServo indexer;
     private boolean useNormalMaxPower;
     private final PIDController indexerPid;
+    private final PIDController pidWeakPosOffset, pidWeakNegOffset, pidNormalPosOffset, pidNormalNegOffset, pidStrongPosOffset, pidStrongNegOffset, pidNormalWeakNegOffset, pidWeak, pidWeakNorm, pidNormal, pidStrong;
     private double indexPower;
+    private final ElapsedTime indexerAutoRotateTimer;
+    private boolean autoRotateCued;
 
     private final ServoImplEx transfer;
     public static int transferInPwm = 620, transferShootPwm = 850;
@@ -57,8 +62,10 @@ public class Indexer {
     private int numBalls;
     private final ColorSensorBall leftCS, rightCS, midCS; // color sensors
     private boolean shouldCheckLeftCS, shouldCheckRightCS, shouldCheckMidCS;
+    private boolean ballAtLeft, ballAtRight, ballAtMid;
     private int curPatternI; // current pattern color selected
-    private boolean autoIndexToPattern;
+    private String pidSelected;
+    private boolean shouldAutoIndexToPattern;
     private double time; // in seconds
 
     public Indexer(Robot robot) {
@@ -69,14 +76,40 @@ public class Indexer {
         indexerEncoder = robot.hardwareMap.get(DcMotorEx.class, "FL");
         resetIndexerEncoder();
         targetIndexerEncoder = 0;
-        indexerPid = new PIDController(params.kP0Balls, params.kI0Balls, params.kD0Balls);
+        indexerPid = new PIDController(params.kPNorm, params.kI, params.kD);
+
+        // pos and neg power offset references direction (clockwise or counter clockwise), which is inverted in terms of the sign of the actual power
+        pidWeakPosOffset = new PIDController(params.kPWeak, params.kI, params.kD);
+        pidWeakPosOffset.setPowerOffset(-params.pidPowerOffset);
+        pidWeakNegOffset = new PIDController(params.kPWeak, params.kI, params.kD);
+        pidWeakNegOffset.setPowerOffset(params.pidPowerOffset);
+        pidNormalPosOffset = new PIDController(params.kPNorm, params.kI, params.kD);
+        pidNormalPosOffset.setPowerOffset(-params.pidPowerOffset);
+        pidNormalNegOffset = new PIDController(params.kPNorm, params.kI, params.kD);
+        pidNormalNegOffset.setPowerOffset(params.pidPowerOffset);
+        pidStrongPosOffset = new PIDController(params.kPStrong, params.kI, params.kD);
+        pidStrongPosOffset.setPowerOffset(-params.pidPowerOffset);
+        pidStrongNegOffset = new PIDController(params.kPStrong, params.kI, params.kD);
+        pidStrongNegOffset.setPowerOffset(params.pidPowerOffset);
+        pidNormalWeakNegOffset = new PIDController(params.kPWeakNorm, params.kI, params.kD);
+        pidNormalWeakNegOffset.setPowerOffset(params.pidPowerOffset);
+
+        pidWeak = new PIDController(params.kPWeak, params.kI, params.kD);
+        pidWeakNorm = new PIDController(params.kPWeakNorm, params.kI, params.kD);
+        pidNormal = new PIDController(params.kPNorm, params.kI, params.kD);
+        pidStrong = new PIDController(params.kPStrong, params.kI, params.kD);
+
+        autoRotateCued = false;
+        indexerAutoRotateTimer = new ElapsedTime();
         useNormalMaxPower = true;
 
         transfer = robot.hardwareMap.get(ServoImplEx.class, "transfer");
         transfer.setPwmRange(new PwmControl.PwmRange(transferInPwm, transferShootPwm));
+        transfer.setPosition(0);
 
         transferStopper = robot.hardwareMap.get(ServoImplEx.class, "transferStopper");
         transferStopper.setPwmRange(new PwmControl.PwmRange(transferStopperDownPwm, transferStopperUpPwm));
+        transferStopper.setPosition(0);
 
         transferTimer = new ElapsedTime();
         transferState = TransferState.OFF;
@@ -95,12 +128,14 @@ public class Indexer {
 
         curPatternI = 0;
         time = 0;
-        autoIndexToPattern = true;
+        shouldAutoIndexToPattern = true;
+        pidSelected = "normal";
     }
 
     public void update(double totalTime) {
         updateColorSensors();
         updateIndexer();
+        updateIndexerAutoRotate();
         updateTransfer();
         time = totalTime;
     }
@@ -111,54 +146,43 @@ public class Indexer {
     }
     private void updateIndexer() {
         // listening for gamepad input to index
-        if(transferState == TransferState.OFF) {
-            if (robot.g1.isFirstB()) {
+        if (transferState == TransferState.OFF) {
+            if (robot.g1.isFirstB())
                 rotateIndexerNormal(-1);
-            } else if (robot.g1.isFirstA()) {
+            else if (robot.g1.isFirstA())
                 rotateIndexerNormal(1);
-            }
+
             // checking for automatic color sensor indexing if indexer is pretty much not moving and not shooting
-            else if (prettyMuchStatic()) {
+            else if (shouldAutoIndexToPattern && prettyMuchStatic()) {
                 // potentially check left and right sensors if indexer is at correct offset
                 if (intakeI % 2 == 1) {
                     boolean ballAtLeft = shouldCheckLeftCS && emptyAt(getLeftIntakeI()) && leftCS.getBallColor() != BallColor.N;
                     if (ballAtLeft) {
                         ballColors[getLeftIntakeI()] = leftCS.getBallColor();
                         numBalls++;
+                        this.ballAtLeft = true;
                     }
                     boolean ballAtRight = shouldCheckRightCS && emptyAt(getRightIntakeI()) && rightCS.getBallColor() != BallColor.N;
                     if (ballAtRight) {
                         ballColors[getRightIntakeI()] = rightCS.getBallColor();
                         numBalls++;
+                        this.ballAtRight = true;
                     }
-
-                    if (numBalls == 3)
-                        rotateIndexerNormal(getAlignIndexerOffset());
-                    else if (ballAtLeft && ballAtRight)
-                        //rotating 180 degrees clockwise
-                        rotateIndexerNormal(3);
-                    else if (ballAtLeft)
-                        if (numBalls == 1)
-                            // rotating 120 degrees clockwise
-                            rotateIndexerNormal(2);
-                        else
-                            rotateIndexerNormal(1);
-                    else if (ballAtRight)
-                        if (numBalls == 1)
-                            // rotating 120 degrees counter clockwise
-                            rotateIndexerNormal(-2);
-                        else
-                            rotateIndexerNormal(-1);
+                    if (ballAtLeft || ballAtRight) {
+                        indexerAutoRotateTimer.reset();
+                        autoRotateCued = true;
+                    }
+                    ballAtMid = false;
                 }
                 // potentially check middle sensor if indexer at correct offset
                 else if (shouldCheckMidCS && emptyAt(intakeI) && midCS.getBallColor() != BallColor.N) {
+                    ballAtMid = true;
+                    ballAtLeft = false;
+                    ballAtRight = false;
                     ballColors[intakeI] = midCS.getBallColor();
                     numBalls++;
-                    if (numBalls == 3)
-                        rotateIndexerNormal(getAlignIndexerOffset());
-                    else
-                        // rotating 180 degrees clockwise
-                        rotateIndexerNormal(3);
+                    indexerAutoRotateTimer.reset();
+                    autoRotateCued = true;
                 }
             }
         }
@@ -167,27 +191,70 @@ public class Indexer {
         if(Math.abs(getIndexerEncoder() - targetIndexerEncoder) < params.errorThreshold)
             indexPower = 0;
         else {
-            double t = numBalls/3.;
-            indexerPid.setKP(lerp(params.kP0Balls, params.kP3Balls, t));
-            indexerPid.setKI(lerp(params.kI0Balls, params.kI3Balls, t));
-            indexerPid.setKD(lerp(params.kD0Balls, params.kD3Balls, t));
-
-            double error = getIndexerError();
-            if(Math.abs(error) < params.smallPIDActivationRange)
-                indexerPid.setKP(indexerPid.getKP() * params.smallPIDCoefAmp);
-            double max = useNormalMaxPower ? lerp(params.normalMaxIndexerPower0, params.normalMaxIndexerPower3, t) : lerp(params.shootMaxIndexerPower0, params.shootMaxIndexerPower3, t);
-            indexPower = Range.clip(indexerPid.updateWithError(error < 0 ? error * params.negIndexerErrorAmp : error), -max, max);
-
-            double minPower = lerp(params.minPower0Balls, params.minPower3Balls, t);
-            indexPower = Math.signum(indexPower) * Math.max(minPower, Math.abs(indexPower));
+//            double t = numBalls/3.;
+//            indexerPid.setKP(lerp(params.kP0Balls, params.kP3Balls, t));
+//            indexerPid.setKI(lerp(params.kI0Balls, params.kI3Balls, t));
+//            indexerPid.setKD(lerp(params.kD0Balls, params.kD3Balls, t));
+//
+//            double error = getIndexerError();
+//            if(Math.abs(error) < params.smallPIDActivationRange)
+//                indexerPid.setKP(indexerPid.getKP() * params.smallPIDCoefAmp);
+//            double max = useNormalMaxPower ? lerp(params.normalMaxIndexerPower0, params.normalMaxIndexerPower3, t) : lerp(params.shootMaxIndexerPower0, params.shootMaxIndexerPower3, t);
+//            indexPower = Range.clip(indexerPid.updateWithError(error < 0 ? error * params.negIndexerErrorAmp : error), -max, max);
+//
+//            double minPower = lerp(params.minPower0Balls, params.minPower3Balls, t);
+//            indexPower = Math.signum(indexPower) * Math.max(minPower, Math.abs(indexPower));
+            double error = targetIndexerEncoder - getIndexerEncoder();
+            indexPower = indexerPid.updateWithError(error < 0 && Math.abs(error) < params.negErrorAmpActivateRange ? error * params.negIndexerErrorAmp : error);
+            indexPower = Range.clip(Math.abs(indexPower), pidSelected.contains("weak") ? params.minPowerWeak :params.minPowerNorm, pidSelected.contains("offset") ? params.offsetMaxPower : params.maxPower) * Math.signum(indexPower);
         }
         indexer.setPower(indexPower);
 
         //misc
         if(robot.g1.isFirstStart())
-            robot.indexer.incNumBalls();
-        else if(robot.g1.isFirstBack())
-            robot.indexer.decNumBalls();
+            shouldAutoIndexToPattern = !shouldAutoIndexToPattern;
+    }
+    private void updateIndexerAutoRotate() {
+        if(!autoRotateCued || indexerAutoRotateTimer.seconds() < params.csResponseDelay)
+            return;
+        if (numBalls == 3)
+            rotateIndexerNormal(getAlignIndexerOffset());
+        else if (ballAtLeft && ballAtRight)
+            //rotating 180 degrees clockwise
+            rotateIndexerNormal(3);
+        else if (ballAtLeft)
+            if (numBalls == 1)
+                // rotating 120 degrees clockwise
+                rotateIndexerNormal(2);
+            else if(!emptyAt(getShooterI()))
+                // rotating 60 degrees clockwise
+                rotateIndexerNormal(1);
+            else
+                // rotating 180 degrees clockwise
+                rotateIndexerNormal(3);
+        else if(ballAtRight) {
+            if (numBalls == 1)
+                // rotating 120 degrees counter clockwise
+                rotateIndexerNormal(-2);
+            else if(!emptyAt(getShooterI()))
+                // rotating 60 degrees counter clockwise
+                rotateIndexerNormal(-1);
+            else
+                // rotating 180 degrees clockwise
+                rotateIndexerNormal(3);
+        }
+
+        else if(ballAtMid) {
+            if(!emptyAt(getOffsetI(getShooterI(), -1)))
+                // rotating 120 degrees clockwise
+                rotateIndexerNormal(2);
+            else
+                rotateIndexerNormal(-2);
+        }
+        autoRotateCued = false;
+        ballAtLeft = false;
+        ballAtMid = false;
+        ballAtRight = false;
     }
     private void updateTransfer() {
         switch(transferState) {
@@ -235,10 +302,75 @@ public class Indexer {
             desiredI = findBallI(curPatternI == params.greenPos ? BallColor.P : BallColor.G);
         return getShooterI() - desiredI;
     }
+    private PIDController calcRotationPid(int sixth) {
+        switch(numBalls) {
+            case 1:
+                if(!emptyAt(getShooterI())) {
+                    if(sixth == 3) {
+                        pidSelected = "weak";
+                        return pidWeak;
+                    }
+                    pidSelected = "normWeak";
+                    return pidWeakNorm;
+                }
+                if(!emptyAt(intakeI)) {
+                    pidSelected = "normWeak";
+                    return pidWeakNorm;
+                }
+
+                // if ball is on left side of indexer
+                if(!emptyAt(getOffsetI(intakeI, 1)) || !emptyAt(getOffsetI(intakeI, 2)))
+                    if(sixth > 0) {
+                        pidSelected = "normal";
+                        return pidNormal;
+                    }
+                    else {
+                        pidSelected = "weak pos offset";
+                        return pidWeakPosOffset;
+                    }
+
+                // if ball is on right side of indexer
+                if(sixth > 0) {
+                    pidSelected = "weakNorm neg offset";
+                    return pidNormalWeakNegOffset;
+                }
+                pidSelected = "normal";
+                return pidNormal;
+
+            case 2:
+                if(!emptyAt(getOffsetI(getShooterI(), 1)) && !emptyAt(getOffsetI(getShooterI(), -1))) {
+                    pidSelected = "normWeak";
+                    return pidWeakNorm;
+                }
+                if(!emptyAt(getLeftIntakeI()) && !emptyAt(getRightIntakeI())) {
+                    pidSelected = "normWeak";
+                    return pidWeakNorm;
+                }
+                // if one ball is on left side (the other must be on top or bottom)
+                if(!emptyAt(getOffsetI(intakeI, 1)) || !emptyAt(getOffsetI(intakeI, 2))) {
+                    if(sixth > 0) {
+                        pidSelected = "strong";
+                        return pidStrong;
+                    }
+                    pidSelected = "strong posOffset";
+                    return pidStrongPosOffset;
+                }
+                // if one ball is on right side (the other must be on top or bottom)
+                if(sixth > 0) {
+                    pidSelected = "normal negOffset";
+                    return pidNormalNegOffset;
+                }
+                pidSelected = "normal";
+                return pidNormal;
+        }
+        return pidNormal; // return if have 0 or 3 balls
+    }
     // positive value = clockwise rotation, vice versa
     private void rotateIndexer(int sixth) {
         intakeI = (intakeI - sixth + 6) % 6;
         targetIndexerEncoder -= sixth * params.thirdRotateAmount/2;
+        indexerPid.set(calcRotationPid(sixth));
+        indexerPid.setTarget(targetIndexerEncoder);
 
         shouldCheckMidCS = emptyAt(intakeI);
         shouldCheckLeftCS = emptyAt(getLeftIntakeI());
@@ -254,7 +386,7 @@ public class Indexer {
         if(!emptyAt(getShooterI())) {
             numBalls = Math.max(numBalls-1, 0);
             ballColors[getShooterI()] = BallColor.N;
-            rotateIndexer(getAlignIndexerOffset());
+            rotateIndexer(2);
             useNormalMaxPower = false;
         }
     }
@@ -295,7 +427,10 @@ public class Indexer {
         return transferState;
     }
     public boolean prettyMuchStatic() {
-        return Math.abs(getIndexerError()) < params.errorThreshold * 2;
+        return indexerEncoder.getVelocity() < params.indexerVelocityStaticThreshold && Math.abs(getIndexerError()) < params.prettyMuchStatic;
+    }
+    public double getIndexerVel() {
+        return indexerEncoder.getVelocity();
     }
     public boolean emptyAt(int i) {
         return ballColors[i] == BallColor.N;
@@ -304,10 +439,13 @@ public class Indexer {
         return intakeI;
     }
     public int getLeftIntakeI() {
-        return (intakeI + 1) % 6;
+        return getOffsetI(intakeI, 1);
     }
     public int getRightIntakeI() {
-        return (intakeI + 5) % 6;
+        return getOffsetI(intakeI, -1);
+    }
+    public int getOffsetI(int i, int offset) {
+        return (i + offset + 6) % 6;
     }
     public int getShooterI() {
         return (intakeI + 3) % 6;
@@ -340,5 +478,38 @@ public class Indexer {
     }
     private double lerp(double a, double b, double t) {
         return a + (b-a) * t;
+    }
+    public String getLabeledBalls() {
+        StringBuilder label = new StringBuilder();
+        for(int i = 0; i < ballColors.length; i++) {
+            if(i == intakeI)
+                label.append("{").append(ballColors[i]).append("}, ");
+            else if(i == getShooterI())
+                label.append("[").append(ballColors[i]).append("], ");
+            else
+                label.append(ballColors[i]).append(", ");
+        }
+        return label.toString();
+    }
+    public String getPidSelected() {
+        return pidSelected;
+    }
+    public boolean isBallAtLeft() {
+        return ballAtLeft;
+    }
+    public boolean isBallAtMid() {
+        return ballAtMid;
+    }
+    public boolean isBallAtRight() {
+        return ballAtRight;
+    }
+    public boolean isAutoRotateCued() {
+        return autoRotateCued;
+    }
+    public double autoIndexCueTime() {
+        return indexerAutoRotateTimer.seconds();
+    }
+    public boolean isShouldAutoIndexToPattern() {
+        return shouldAutoIndexToPattern;
     }
 }
