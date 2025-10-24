@@ -35,32 +35,37 @@ public class MainTestTele extends LinearOpMode {
 //            telemetry.addLine();
 
             telemetry.addLine("INDEXER SPECIFIC----");
-            telemetry.addData("pid selected", robot.indexer.getPidSelected());
             telemetry.addData("  indexer encoder", robot.indexer.getIndexerEncoder());
             telemetry.addData("  indexer target", robot.indexer.getTargetIndexerEncoder());
             telemetry.addData("  indexer error", robot.indexer.getIndexerError());
             telemetry.addData("  indexer power", robot.indexer.getIndexerPower());
-            telemetry.addData("  pretty much static", robot.indexer.prettyMuchStatic());
-            telemetry.addData("  num balls", robot.indexer.getNumBalls());
-            telemetry.addData("  indexer vel", robot.indexer.getIndexerVel());
             telemetry.addLine();
+            telemetry.addData("  pretty much static", robot.indexer.prettyMuchStatic());
+            telemetry.addData("  indexer vel", robot.indexer.getIndexerVel());
+            telemetry.addData("  num balls", robot.indexer.getNumBalls());
+            telemetry.addLine();
+            telemetry.addData("auto rotate cued", robot.indexer.isAutoRotateCued());
             telemetry.addData("  ballList", robot.indexer.getLabeledBalls());
             telemetry.addData("  sc left, mid, right", robot.indexer.shouldCheckLeftCS() + ", " + robot.indexer.shouldCheckMidCS() + ", " + robot.indexer.shouldCheckRightCS());
-            telemetry.addData("  ballAt left, mid, right", robot.indexer.isBallAtLeft() + ", " + robot.indexer.isBallAtMid() + ", " + robot.indexer.isBallAtRight());
             telemetry.addData("  left, mid, right CS ball color", robot.indexer.getLeftCSColor() + ", " + robot.indexer.getMidCSColor() + ", " + robot.indexer.getRightCSColor());
             telemetry.addData("  intakeI, li, ri, si", robot.indexer.getIntakeI() + ", " + robot.indexer.getLeftIntakeI() + ", " + robot.indexer.getRightIntakeI() + ", " + robot.indexer.getShooterI());
-            telemetry.addData("  should auto rotate", robot.indexer.isShouldAutoIndexToPattern());
-            telemetry.addData("  auto rotate cued", robot.indexer.isAutoRotateCued());
-            telemetry.addData("  auto index timer", robot.indexer.autoIndexCueTime());
+            telemetry.addData("  should auto rotate", robot.indexer.shouldAutoIndex());
+            telemetry.addData("  pid selected", robot.indexer.getPidSelected());
+
+            telemetry.addLine("TRANSFER SPECIFIC-----");
+            telemetry.addData("  transfer state", robot.indexer.getTransferState());
+            telemetry.addData("  just transferred", robot.indexer.justTransferred());
 
             telemetry.addLine();
             telemetry.addLine("SHOOTER SPECIFIC----");
             telemetry.addData("should shoot", robot.shooter.getShouldShoot());
             telemetry.addData("  shooter power", robot.shooter.getShooterPower());
-            telemetry.addData("  target power", robot.shooter.getTargetMotorPower());
             telemetry.addData("  shooter velocity", robot.shooter.getShooterVelocity());
+            telemetry.addData("  motor 2 vel", robot.shooter.getMotor2Velocity());
+            telemetry.addData("  motor vel offset", robot.shooter.getMotorVelOffset());
             telemetry.addData("  target vel", robot.shooter.getTargetMotorVel());
             telemetry.addData("  hood position", robot.shooter.getHoodPos());
+            telemetry.addData("  hood offset", robot.shooter.getHoodOffset());
             telemetry.addData("  robot dist", Math.sqrt(Math.pow(robot.follower.getPose().getX() - robot.goalX, 2) + Math.pow(robot.follower.getPose().getY() - robot.goalY, 2)));
             telemetry.addData("  shooter miliamp", robot.shooter.getShooterMiliAmps());
 
