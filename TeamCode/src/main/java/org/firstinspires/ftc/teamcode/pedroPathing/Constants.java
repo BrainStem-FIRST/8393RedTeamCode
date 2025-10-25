@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.pedroPathing;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.pedropathing.control.FilteredPIDFCoefficients;
 import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.FollowerConstants;
@@ -40,9 +41,21 @@ public class Constants {
             .mass(10.677564)
             .forwardZeroPowerAcceleration(-46.29)
             .lateralZeroPowerAcceleration(-64.99)
-            .headingPIDFCoefficients(new PIDFCoefficients(0.01, 0, 0, 0));
+            .centripetalScaling(5)
 
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.5, 0, 0, 0))
+            .useSecondaryTranslationalPIDF(true)
+            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.4, 0, 0.02, 0))
+
+            .headingPIDFCoefficients(new PIDFCoefficients(1, 0, 0.001, 0))
+            .useSecondaryHeadingPIDF(true)
+            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(0.5, 0, 0.02, 0))
+
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.03, 0, 0.00001, 0.6, 0.01))
+            .useSecondaryDrivePIDF(true)
+            .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0.08, 0, 0.000005, 0.6, 0.01));
+
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1.3, 1);
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerConstants, hardwareMap)

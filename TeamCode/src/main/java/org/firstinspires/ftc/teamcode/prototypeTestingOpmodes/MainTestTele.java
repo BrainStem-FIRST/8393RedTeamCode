@@ -22,10 +22,11 @@ public class MainTestTele extends LinearOpMode {
         while (opModeIsActive()) {
             g1.update();
             g2.update();
+            robot.update();
             robot.intake.update();
             robot.indexer.update(timer.seconds());
             robot.shooter.update(timer.seconds());
-            robot.updatePedroTele();
+            robot.parker.update();
 
             telemetry.addData("fps", 1/(timer.seconds()-prevSec));
 //            telemetry.addLine("SUBSYSTEM STATES---------------");
@@ -34,6 +35,8 @@ public class MainTestTele extends LinearOpMode {
 //            telemetry.addData("  transfer state", robot.indexer.getTransferState());
 //            telemetry.addLine();
 
+            telemetry.addData("voltage", robot.getBatteryVoltage());
+            telemetry.addData("automated drive", robot.automatedDrive());
             telemetry.addLine("INDEXER SPECIFIC----");
             telemetry.addData("  indexer encoder", robot.indexer.getIndexerEncoder());
             telemetry.addData("  indexer target", robot.indexer.getTargetIndexerEncoder());
@@ -68,6 +71,7 @@ public class MainTestTele extends LinearOpMode {
             telemetry.addData("  hood offset", robot.shooter.getHoodOffset());
             telemetry.addData("  robot dist", Math.sqrt(Math.pow(robot.follower.getPose().getX() - robot.goalX, 2) + Math.pow(robot.follower.getPose().getY() - robot.goalY, 2)));
             telemetry.addData("  shooter miliamp", robot.shooter.getShooterMiliAmps());
+            telemetry.addData("  zone", robot.shooter.getZone());
 
 //            telemetry.addLine();
 //            telemetry.addLine("INTAKE SPECIFIC-----");
