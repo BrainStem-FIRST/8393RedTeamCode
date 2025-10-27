@@ -11,7 +11,7 @@ public class Parker {
     private final Robot robot;
     private final DcMotorEx parkMotor;
     private final PIDController pid;
-    private double motorPower;
+    private double motorPower, prevMotorPower;
 
     public enum ParkState {
         DOWN, UP
@@ -46,7 +46,9 @@ public class Parker {
                     motorPower = getUpPower();
                 break;
         }
-        parkMotor.setPower(motorPower);
+        if(motorPower != prevMotorPower)
+            parkMotor.setPower(motorPower);
+        prevMotorPower = motorPower;
     }
     public int getMotorPos() {
         return parkMotor.getCurrentPosition();

@@ -8,7 +8,7 @@ import org.firstinspires.ftc.teamcode.robot.Robot;
 
 // has caching capability
 public class ColorSensorBall {
-    public static double[] normalGreenBallLow = {.11, .47, .34, 200};
+    public static double[] normalGreenBallLow = {.095, .47, .34, 200};
     public static double[] normalGreenBallHigh = {.18, .52, .38, 10000};
     public static double[] normalPurpleBallLow = {.20, .26, .42, 200};
     public static double[] normalPurpleBallHigh = {.26, .30, .48, 10000};

@@ -26,8 +26,8 @@ public class Constants {
             .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
             .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
             .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
-            .xVelocity(67.62)
-            .yVelocity(46.19)
+            .xVelocity(72.06)
+            .yVelocity(31.37)
             .useBrakeModeInTeleOp(true);
     public static PinpointConstants localizerConstants = new PinpointConstants()
             .forwardPodY(4)
@@ -38,18 +38,18 @@ public class Constants {
             .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
             .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .mass(10.677564)
-            .forwardZeroPowerAcceleration(-46.29)
-            .lateralZeroPowerAcceleration(-64.99)
+            .mass(11.58)
+            .forwardZeroPowerAcceleration(-61.89)
+            .lateralZeroPowerAcceleration(-71.66)
             .centripetalScaling(5)
 
             .translationalPIDFCoefficients(new PIDFCoefficients(0.5, 0, 0, 0))
             .useSecondaryTranslationalPIDF(true)
             .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.4, 0, 0.02, 0))
 
-            .headingPIDFCoefficients(new PIDFCoefficients(1, 0, 0.001, 0))
+            .headingPIDFCoefficients(new PIDFCoefficients(3, 0, 0.001, 0))
             .useSecondaryHeadingPIDF(true)
-            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(0.5, 0, 0.02, 0))
+            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(4, 0, 0.02, 0))
 
             .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.03, 0, 0.00001, 0.6, 0.01))
             .useSecondaryDrivePIDF(true)

@@ -1,11 +1,6 @@
 package org.firstinspires.ftc.teamcode.robot;
 
 import com.acmerobotics.dashboard.config.Config;
-import com.pedropathing.geometry.BezierLine;
-import com.pedropathing.geometry.Pose;
-import com.pedropathing.paths.HeadingInterpolator;
-import com.pedropathing.paths.Path;
-import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.PwmControl;
@@ -15,28 +10,27 @@ import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.utils.PIDController;
-import org.firstinspires.ftc.teamcode.utils.Regression;
-
-import java.util.function.Supplier;
+import org.firstinspires.ftc.teamcode.utils.QuadRegression;
 
 @Config
 public class Shooter {
     public static class Params {
         public double kP = 0.05, kI = 0, kD = 0.003, maxShooterPower = 0.8;
         public double farDist = 145;
-        public double nearDist = 75;
+        public double nearDist = 65;
         public double midDist = (farDist + nearDist) / 2;
 
         public double initHoodPosFar = 0.08;
-        public double initHoodPosNear = 0.43;
 
-        public double shooterVelocityFar = 395, initShooterPowerFar = 0.65;
-        public double shooterVelocityNear = 290, initShooterPowerNear = 0.42;
-        public double t = 0.75;
-        public int minHoodPwm = 1440, maxHoodPwm = 1010;
-        public double hoodFarRegressM = 0, hoodFarRegressB = 0;
-        public double hoodNearRegressM = 0.1, hoodNearRegressB = 0.1;
-        public double manualHoodInc = 0.01, autoHoodInc = 0.015, manualShooterInc = 5;
+        public double shooterVelocityFar = 400, initShooterPowerFar = 0.655;
+        public double shooterVelocityNear = 275, initShooterPowerNear = 0.45;
+        public double t = 0.2;
+        public int minHoodPwm = 1800, maxHoodPwm = 1400;
+        //y=0.000203197x^{2}-0.16259x+32.54614
+        public double hoodFarRegressA = 0.000203197, hoodFarRegressB = -0.16259, hoodFarRegressC = 32.54614;
+        //y=0.0009x^{2}-0.4767x+63.8595
+        public double hoodNearRegressA = 0.0009, hoodNearRegressB = -0.4767, hoodNearRegressC = 63.8595;
+        public double manualHoodInc = 0.01, manualShooterInc = 5;
     }
     public static Params params = new Params();
     private final Robot robot;
@@ -45,16 +39,17 @@ public class Shooter {
     private final DcMotorEx motor2;
 
     private final ServoImplEx hoodServo;
-    private PIDController shooterPid;
+    private final PIDController shooterPid;
 
     // NL and NR signify the left and right near positions
     private double targetMotorPower;
     private double targetMotorVel;
     private double targetHoodPos;
     private double motorVelOffset, hoodOffset;
-    private Regression hoodFarRegress, hoodNearRegress; // regressions output desired hood position as function of motor velocity (in degrees/s)
+    private final QuadRegression hoodFarRegress, hoodNearRegress; // regressions output desired hood position as function of motor velocity (in degrees/s)
     private double totalTime;
     private int zone;
+    private double shooterPower, prevShooterPower, prevHoodPos;
     public Shooter(Robot robot) {
         this.robot = robot;
 
@@ -69,8 +64,8 @@ public class Shooter {
         hoodServo = robot.hardwareMap.get(ServoImplEx.class, "hoodServo");
         hoodServo.setPwmRange(new PwmControl.PwmRange(params.minHoodPwm, params.maxHoodPwm));
 
-        hoodFarRegress = new Regression(params.hoodFarRegressM, params.hoodFarRegressB);
-        hoodNearRegress = new Regression(params.hoodNearRegressM, params.hoodNearRegressB);
+        hoodFarRegress = new QuadRegression(params.hoodFarRegressA, params.hoodFarRegressB, params.hoodFarRegressC);
+        hoodNearRegress = new QuadRegression(params.hoodNearRegressA, params.hoodNearRegressB, params.hoodNearRegressC);
 
         targetMotorPower = 0;
         targetHoodPos = params.initHoodPosFar;
@@ -95,27 +90,19 @@ public class Shooter {
         if (zone == 1) {
             targetMotorVel = params.shooterVelocityFar + motorVelOffset;
             shooterPid.setTarget(targetMotorVel);
-            targetHoodPos = Range.clip(params.initHoodPosFar + hoodFarRegress.f(getShooterVelocity()-params.shooterVelocityFar) + hoodOffset, 0, 1);
+            targetHoodPos = Range.clip(Range.clip(hoodFarRegress.f(getShooterVelocity()), 0, 1) + hoodOffset, 0, 1);
         }
         else if(zone == -1) {
             targetMotorVel = params.shooterVelocityNear + motorVelOffset;
             shooterPid.setTarget(targetMotorVel);
-//            targetHoodPos = hoodNearRegress.f(getShooterVelocity());
-            targetHoodPos = params.initHoodPosNear + hoodOffset;
+            targetHoodPos = Range.clip(Range.clip(hoodNearRegress.f(getShooterVelocity()), 0, 1) + hoodOffset, 0, 1);
         }
 
         // setting hood position
-        if(robot.g1.isFirstDpadUp()) {
+        if(robot.g1.isFirstDpadUp())
             hoodOffset += params.manualHoodInc;
-        }
-        else if(robot.g1.isFirstDpadDown()) {
+        else if(robot.g1.isFirstDpadDown())
             hoodOffset -= params.manualHoodInc;
-        }
-//        else if(robot.indexer.justTransferred())
-//            if(robot.indexer.getNumBalls() == 0)
-//                hoodOffset -= params.autoHoodInc * 3;
-//            else
-//                hoodOffset += params.autoHoodInc;
 
         // setting shooter power
         if(robot.g1.isFirstDpadRight()) {
@@ -127,13 +114,22 @@ public class Shooter {
             shooterPid.setTarget(targetMotorVel + motorVelOffset);
         }
 
-        if(shouldShoot) {
-            double idealPower = dist > params.midDist ? params.initShooterPowerFar : params.initShooterPowerNear;
-            setShooterPower(shooterPid.update(getShooterVelocity()) * params.t + idealPower * (1 - params.t));
+        // do not adjust after shoot button has been pressed
+        if(robot.indexer.getTransferState() != Indexer.TransferState.TRANSFERRING) {
+            shooterPower = 0;
+            if (shouldShoot) {
+                double idealPower = zone == 1 ? params.initShooterPowerFar : params.initShooterPowerNear;
+                // params.t is a value between 0 and 1 (I have it set to 0.9)
+                shooterPower = shooterPid.update(getShooterVelocity()) * params.t + idealPower * (1 - params.t);
+            }
+
+            if(shooterPower != prevShooterPower)
+                setShooterPower(shooterPower);
+            if(targetHoodPos != prevHoodPos)
+                hoodServo.setPosition(targetHoodPos);
         }
-        else
-            setShooterPower(0);
-        hoodServo.setPosition(targetHoodPos);
+        prevShooterPower = shooterPower;
+        prevHoodPos = targetHoodPos;
     }
     public double getHoodPos() {
         return hoodServo.getPosition();
@@ -157,7 +153,7 @@ public class Shooter {
     }
 
     public double distance(){
-        return Math.sqrt(Math.pow(robot.follower.getPose().getX()-robot.goalX, 2) + Math.pow(robot.follower.getPose().getY()-robot.goalY, 2));
+        return Math.sqrt(Math.pow(robot.follower.getPose().getX()-Robot.params.goalX, 2) + Math.pow(robot.follower.getPose().getY()-Robot.params.goalY, 2));
     }
     public double getShooterVelocity() {
         return (motor1.getVelocity(AngleUnit.DEGREES) - motor2.getVelocity(AngleUnit.DEGREES)) * 0.5;
@@ -176,5 +172,8 @@ public class Shooter {
     }
     public double getShooterMiliAmps() {
         return motor1.getCurrent(CurrentUnit.MILLIAMPS);
+    }
+    public double getHoodNearRegress() {
+        return hoodNearRegress.f(getShooterVelocity());
     }
 }
