@@ -26,7 +26,6 @@ public class MainTestTele extends LinearOpMode {
             robot.intake.update();
             robot.indexer.update();
             robot.shooter.update();
-            robot.parker.update();
 
             telemetry.addData("fps", 1/(timer.seconds()-prevSec));
             telemetry.addData("voltage", robot.getBatteryVoltage());
@@ -57,13 +56,9 @@ public class MainTestTele extends LinearOpMode {
 
             telemetry.addLine();
             telemetry.addLine("SHOOTER----");
-            telemetry.addData("should shoot", robot.shooter.getShouldShoot());
-            telemetry.addData("  shooter power", robot.shooter.getShooterPower());
-            telemetry.addData("  shooter velocity", robot.shooter.getShooterVelocity());
-            telemetry.addData("  motor vel offset", robot.shooter.getMotorVelOffset());
-            telemetry.addData("  target vel", robot.shooter.getTargetMotorVel());
+            telemetry.addData("  shooter target and current power", robot.shooter.getTargetMotorPower() + ", " + robot.shooter.getShooterPower());
+            telemetry.addData("  shooter target and current veloc", robot.shooter.getTargetMotorVel() + ", " + robot.shooter.getShooterVelocity());
             telemetry.addData("  hood position", robot.shooter.getHoodPos());
-            telemetry.addData("  hood offset", robot.shooter.getHoodOffset());
             telemetry.addData("  robot dist", robot.shooter.distance());
             telemetry.addData("  zone", robot.shooter.getZone());
 
