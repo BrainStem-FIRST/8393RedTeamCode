@@ -47,7 +47,6 @@ public class Shooter {
     private double targetHoodPos;
     private double motorVelOffset, hoodOffset;
     private final QuadRegression hoodFarRegress, hoodNearRegress; // regressions output desired hood position as function of motor velocity (in degrees/s)
-    private double totalTime;
     private int zone;
     private double shooterPower, prevShooterPower, prevHoodPos;
     public Shooter(Robot robot) {
@@ -70,7 +69,6 @@ public class Shooter {
         targetMotorPower = 0;
         targetHoodPos = params.initHoodPosFar;
         targetMotorVel = params.shooterVelocityFar;
-        totalTime = 0;
         zone = 1;
 
         shooterPid = new PIDController(params.kP, params.kI, params.kD);
@@ -78,8 +76,7 @@ public class Shooter {
         shooterPid.setTarget(targetMotorVel);
     }
 
-    public void update(double totalTime) {
-        this.totalTime = totalTime;
+    public void update() {
         if(robot.g1.isFirstY())
             shouldShoot = !shouldShoot;
         if(robot.g1.isFirstBack())
@@ -115,7 +112,7 @@ public class Shooter {
         }
 
         // do not adjust after shoot button has been pressed
-        if(robot.indexer.getTransferState() != Indexer.TransferState.TRANSFERRING) {
+        if(robot.transfer.getTransferState() != Transfer.TransferState.TRANSFERRING) {
             shooterPower = 0;
             if (shouldShoot) {
                 double idealPower = zone == 1 ? params.initShooterPowerFar : params.initShooterPowerNear;

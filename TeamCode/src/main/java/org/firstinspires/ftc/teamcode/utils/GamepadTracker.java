@@ -6,7 +6,7 @@ import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
 public class GamepadTracker {
-    public final Gamepad gamepad;
+    private final Gamepad gamepad;
     private int aFrameCount = 0;
     private int bFrameCount = 0;
     private int xFrameCount = 0;
@@ -27,9 +27,6 @@ public class GamepadTracker {
     }
 
     public void update() {
-        if (gamepad == null)
-            return;
-
         // Update each button's frame count
         updateButtonFrame(gamepad.a, () -> aFrameCount, (c) -> aFrameCount = c);
         updateButtonFrame(gamepad.b, () -> bFrameCount, (c) -> bFrameCount = c);
@@ -80,5 +77,62 @@ public class GamepadTracker {
     }
     public boolean isFirstBack() {
         return backButtonFrameCount == 1;
+    }
+
+    // regular checkers
+    // regular checkers
+    public boolean a() {
+        return gamepad.a;
+    }
+    public boolean b() {
+        return gamepad.b;
+    }
+    public boolean x() {
+        return gamepad.x;
+    }
+    public boolean y() {
+        return gamepad.y;
+    }
+    public boolean dpadLeft() {
+        return gamepad.dpad_left;
+    }
+    public boolean dpadRight() {
+        return gamepad.dpad_left;
+    }
+    public boolean dpadUp() {
+        return gamepad.dpad_up;
+    }
+    public boolean dpadDown() {
+        return gamepad.dpad_down;
+    }
+    public boolean back() {
+        return gamepad.back;
+    }
+    public boolean start() {
+        return gamepad.start;
+    }
+    public boolean leftBumper() {
+        return gamepad.left_bumper;
+    }
+    public boolean rightBumper() {
+        return gamepad.right_bumper;
+    }
+    public double leftStickX() {
+        return gamepad.left_stick_x;
+    }
+    public double leftStickY() {
+        return gamepad.left_stick_y;
+    }
+    public double rightStickX() {
+        return gamepad.right_stick_x;
+    }
+    public double rightStickY() {
+        return gamepad.right_stick_y;
+    }
+    public double leftTrigger() {
+        return gamepad.left_trigger;
+    }
+    public double rightTrigger() {
+        return gamepad.right_trigger;
     }
 }

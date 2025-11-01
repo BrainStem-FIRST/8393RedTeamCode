@@ -22,10 +22,10 @@ public class MainTestTele extends LinearOpMode {
         while (opModeIsActive()) {
             g1.update();
             g2.update();
-            robot.update();
+            robot.updateTele();
             robot.intake.update();
             robot.indexer.update();
-            robot.shooter.update(timer.seconds());
+            robot.shooter.update();
             robot.parker.update();
 
             telemetry.addData("fps", 1/(timer.seconds()-prevSec));
@@ -34,7 +34,7 @@ public class MainTestTele extends LinearOpMode {
             telemetry.addData("green pos", Robot.params.greenPos);
 
             telemetry.addLine("INDEXER----");
-            telemetry.addData("  indexer encoder", robot.indexer.getIndexerEncoder());
+            telemetry.addData("  indexer encoder", robot.indexer.getIndexerEncoderTracker());
             telemetry.addData("  indexer target", robot.indexer.getTargetIndexerEncoder());
             telemetry.addData("  indexer error", robot.indexer.getIndexerError());
             telemetry.addData("  indexer power", robot.indexer.getIndexerPower());
@@ -53,7 +53,7 @@ public class MainTestTele extends LinearOpMode {
             telemetry.addData("  left, mid, right CS ball color", robot.indexer.getLeftCSColor() + ", " + robot.indexer.getMidCSColor() + ", " + robot.indexer.getRightCSColor());
 
             telemetry.addLine("TRANSFER SPECIFIC-----");
-            telemetry.addData("  transfer state", robot.indexer.getTransferState());
+            telemetry.addData("  transfer state", robot.transfer.getTransferState());
 
             telemetry.addLine();
             telemetry.addLine("SHOOTER----");

@@ -16,6 +16,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
+import org.firstinspires.ftc.teamcode.utils.NullGamepadTracker;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
@@ -32,6 +33,7 @@ public class Robot {
     public final Follower follower;
     public final Intake intake;
     public final Indexer indexer;
+    public final Transfer transfer;
     public final Shooter shooter;
     public final Parker parker;
 
@@ -48,6 +50,39 @@ public class Robot {
     }
     public static Params params = new Params();
 
+
+    // used for auto
+    public Robot(HardwareMap hardwareMap, Telemetry telemetry) {
+        this.hardwareMap = hardwareMap;
+        this.telemetry = telemetry;
+        g1 = new NullGamepadTracker();
+        g2 = new NullGamepadTracker();
+
+        intake = new Intake(this);
+        indexer = new Indexer(this);
+        transfer = new Transfer(this);
+        shooter = new Shooter(this);
+        parker = new Parker(this);
+        follower = Constants.createFollower(hardwareMap);
+
+        //Focals (pixels) - Fx: 628.438 Fy: 628.438
+        //Optical center - Cx: 986.138 Cy: 739.836
+        tagProcessor = new AprilTagProcessor.Builder()
+                .setDrawAxes(true)
+                .setDrawCubeProjection(true)
+                .setDrawTagID(true)
+                .setTagLibrary(AprilTagGameDatabase.getDecodeTagLibrary())
+                .setLensIntrinsics(628.438, 628.438, 986.138, 739.836)
+                .build();
+        visionPortal = new VisionPortal.Builder()
+                .addProcessor(tagProcessor)
+                .setCamera(hardwareMap.get(WebcamName.class, "webcam"))
+                .setCameraResolution(new Size(1920, 1200))
+                .setStreamFormat(VisionPortal.StreamFormat.MJPEG)
+                .build();
+    }
+
+    // used for tele
     public Robot(HardwareMap hardwareMap, Telemetry telemetry, GamepadTracker g1, GamepadTracker g2) {
         this.hardwareMap = hardwareMap;
 
@@ -55,12 +90,11 @@ public class Robot {
         this.g1 = g1;
         this.g2 = g2;
 
-        indexer = new Indexer(this);
         intake = new Intake(this);
-
+        indexer = new Indexer(this);
+        transfer = new Transfer(this);
         shooter = new Shooter(this);
         parker = new Parker(this);
-
         follower = Constants.createFollower(hardwareMap);
 
         //Focals (pixels) - Fx: 628.438 Fy: 628.438
@@ -89,8 +123,11 @@ public class Robot {
                 .setHeadingInterpolation(HeadingInterpolator.linearFromPoint(follower::getHeading, Math.toRadians(45), 0.8))
                 .build();
     }
-    public void update() {
+    public void updateTele() {
         updatePedroTele();
+        updateAprilTag();
+    }
+    public void updateAuto() {
         updateAprilTag();
     }
     private void updateAprilTag() {
@@ -128,7 +165,7 @@ public class Robot {
                 follower.followPath(farPathChain.get());
             }
             else
-                follower.setTeleOpDrive(-g1.gamepad.left_stick_y, -g1.gamepad.left_stick_x, -g1.gamepad.right_stick_x + g1.gamepad.left_stick_x * params.turnCorrection, true);
+                follower.setTeleOpDrive(-g1.leftStickY(), -g1.leftStickX(), -g1.rightStickX() + g1.leftStickX() * params.turnCorrection, true);
         }
         else if(!follower.isBusy()) {
             automatedDrive = false;

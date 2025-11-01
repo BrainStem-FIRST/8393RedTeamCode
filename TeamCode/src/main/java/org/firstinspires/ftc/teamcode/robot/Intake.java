@@ -19,7 +19,8 @@ public class Intake {
     private IntakeState intakeState;
     private final DcMotorEx intake;
     private double motorPower, prevMotorPower;
-    private ElapsedTime postCollectTimer;
+    private final ElapsedTime postCollectTimer;
+    private boolean shouldIntake, intakeSafely;
     public Intake(Robot robot) {
         this.robot = robot;
         intakeState = IntakeState.OFF;
@@ -35,13 +36,18 @@ public class Intake {
                 if(postCollectTimer.seconds() > postCollectTime)
                     setStateOff();
             case OFF:
-                if(robot.g1.gamepad.right_trigger > 0.1)
+                if(intakeSafely && !robot.indexer.prettyMuchStatic())
+                    return;
+
+                if(listenCollectInput() || shouldIntake)
                     setStateCollecting(collectPower);
-                else if(robot.g1.gamepad.left_trigger > 0.1)
+                else if(listenExtakeInput())
                     setStateCollecting(-collectPower);
                 break;
             case COLLECTING:
-                if(!listenCollectInput())
+                if(intakeSafely && !robot.indexer.prettyMuchStatic()) // auto checking for indexer movement
+                    setStateOff();
+                else if(!listenCollectInput() && !listenExtakeInput() && !shouldIntake)
                     setStatePostCollecting();
                 break;
         }
@@ -68,6 +74,13 @@ public class Intake {
         return intake.getPower();
     }
     private boolean listenCollectInput() {
-        return robot.g1.gamepad.right_trigger > 0.1;
+        return robot.g1.rightTrigger() > 0.1;
+    }
+    private boolean listenExtakeInput() { return robot.g1.leftTrigger() > 0.1; }
+    public void setIntake(boolean shouldIntake) {
+        this.shouldIntake = shouldIntake;
+    }
+    public void setIntakeSafely(boolean intakeSafely) {
+        this.intakeSafely = intakeSafely;
     }
 }
