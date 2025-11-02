@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 public class Transfer {
     public static class Params {
-        public int transferInPwm = 620, transferShootPwm = 850;
+        public int transferInPwm = 610, transferShootPwm = 850;
         public int transferStopperDownPwm = 2310, transferStopperUpPwm = 2450;
         public double transferMoveTime = 0.13, transferStopperMoveTime = 0.1, transferResetTime = 0.05;
     }
@@ -40,7 +40,7 @@ public class Transfer {
     public void update() {
         switch(transferState) {
             case OFF:
-                if((robot.g1.rightBumper() || shouldShootAll) && robot.indexer.prettyMuchStatic())
+                if((robot.g1.rightBumper() || shouldShootAll) && robot.indexer.prettyMuchStatic() && robot.shooter.getShooterVelocity() > robot.shooter.getMinShooterVel())
                     setTransferTransferring();
                 break;
             case TRANSFERRING:
@@ -79,5 +79,8 @@ public class Transfer {
     }
     public void setShootAll(boolean shootAll) {
         this.shouldShootAll = shootAll;
+    }
+    public boolean shouldShootAll() {
+        return shouldShootAll;
     }
 }

@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.prototypeTestingOpmodes;
 
 import android.graphics.Color;
 
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.ColorSensor;
@@ -20,7 +21,7 @@ public class ColorSensorTest extends LinearOpMode {
         boolean mode = true;
 
         GamepadTracker g1 = new GamepadTracker(gamepad1);
-        Robot r = new Robot(hardwareMap, telemetry, g1, new GamepadTracker(gamepad2));
+        Robot r = new Robot(hardwareMap, telemetry, g1, new GamepadTracker(gamepad2), new Pose(0, 0, 0));
         ColorSensorBall leftCS = new ColorSensorBall(r, "leftCS");
         ColorSensorBall rightCS = new ColorSensorBall(r, "rightCS");
         ColorSensorBall midCS = new ColorSensorBall(r, "midCS");

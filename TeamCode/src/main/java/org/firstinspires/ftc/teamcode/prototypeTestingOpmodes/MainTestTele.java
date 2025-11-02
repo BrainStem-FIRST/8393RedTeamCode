@@ -1,10 +1,13 @@
 package org.firstinspires.ftc.teamcode.prototypeTestingOpmodes;
 
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.teamcode.opmodes.Auto;
 import org.firstinspires.ftc.teamcode.robot.Robot;
+import org.firstinspires.ftc.teamcode.utils.ColorSensorBall;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 
 @TeleOp(name="main test test tele")
@@ -14,7 +17,7 @@ public class MainTestTele extends LinearOpMode {
         telemetry.setMsTransmissionInterval(11);
         GamepadTracker g1 = new GamepadTracker(gamepad1);
         GamepadTracker g2 = new GamepadTracker(gamepad2);
-        Robot robot = new Robot(hardwareMap, telemetry, g1, g2);
+        Robot robot = new Robot(hardwareMap, telemetry, g1, g2, new Pose(Auto.params.startX, Auto.params.startY, Math.toRadians(Auto.params.startA)));
         robot.initPedroTele();
         waitForStart();
         ElapsedTime timer = new ElapsedTime();
@@ -25,6 +28,7 @@ public class MainTestTele extends LinearOpMode {
             robot.updateTele();
             robot.intake.update();
             robot.indexer.update();
+            robot.transfer.update();
             robot.shooter.update();
 
             telemetry.addData("fps", 1/(timer.seconds()-prevSec));
@@ -43,14 +47,18 @@ public class MainTestTele extends LinearOpMode {
             telemetry.addData("  indexer vel", robot.indexer.getIndexerVel());
             telemetry.addData("  num balls", robot.indexer.getNumBalls());
             telemetry.addData("  ballList", robot.indexer.getLabeledBalls());
+            telemetry.addData("  find purple", robot.indexer.findBallI(ColorSensorBall.BallColor.P));
+            telemetry.addData("  find green", robot.indexer.findBallI(ColorSensorBall.BallColor.G));
+            telemetry.addData("  align offset", robot.indexer.getAlignIndexerOffset());
             telemetry.addData("  intakeI, li, ri, si", robot.indexer.getIntakeI() + ", " + robot.indexer.getLeftIntakeI() + ", " + robot.indexer.getRightIntakeI() + ", " + robot.indexer.getShooterI());
-            telemetry.addData("  cur pattern i", robot.indexer.getCurPatternI());
+            telemetry.addData("  green pos, cur pattern i", Robot.params.greenPos + ", " + robot.indexer.getCurPatternI());
             telemetry.addLine();
             telemetry.addData("auto rotate cued", robot.indexer.isAutoRotateCued());
             telemetry.addData("  should auto rotate", robot.indexer.shouldAutoIndex());
             telemetry.addData("  sc left, mid, right", robot.indexer.shouldCheckLeftCS() + ", " + robot.indexer.shouldCheckMidCS() + ", " + robot.indexer.shouldCheckRightCS());
             telemetry.addData("  left, mid, right CS ball color", robot.indexer.getLeftCSColor() + ", " + robot.indexer.getMidCSColor() + ", " + robot.indexer.getRightCSColor());
 
+            telemetry.addLine("");
             telemetry.addLine("TRANSFER SPECIFIC-----");
             telemetry.addData("  transfer state", robot.transfer.getTransferState());
 

@@ -3,14 +3,17 @@ package org.firstinspires.ftc.teamcode.robot;
 import android.util.Size;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.pedropathing.control.PIDFCoefficients;
+import com.pedropathing.control.PIDFController;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
-import com.pedropathing.paths.HeadingInterpolator;
+import com.pedropathing.math.Vector;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
+import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -43,16 +46,23 @@ public class Robot {
     private final AprilTagProcessor tagProcessor;
     private final VisionPortal visionPortal;
     public static class Params {
-        public double goalX = -72, goalY = -68;
-        public double farX = 51, farY = -8, farHeading = -0.53;
-        public double turnCorrection = 0.14;
+        public double goalX = 3, goalY = 141;
+        public double farX = 86.3, farY = 16, farHeading = -65;
+        public double nearX = 52.7, nearY = 89.6, nearHeading = -45;
+        public double turnCorrection = 0.14, turnAmpNormal = 0.8, turnAmpSlow = 0.2;
         public int greenPos = -1;
+        public double width = 17.75, wheelToWheelL = 10.5;
+        public double intakeToFrontWheelL = 4.5, backToBackWheelL = 1.625;
+        public double intakeToWheelCenter = wheelToWheelL / 2 + intakeToFrontWheelL;
+        public double backToWheelCenter = wheelToWheelL / 2 + backToBackWheelL;
+        public double tickW = 0.8;
+        public double kP = 0.004, kD = 0.01, kF = 0.1;
     }
+    private PIDFController autoTurnPid;
+    private boolean slowTurn;
     public static Params params = new Params();
-
-
     // used for auto
-    public Robot(HardwareMap hardwareMap, Telemetry telemetry) {
+    public Robot(HardwareMap hardwareMap, Telemetry telemetry, Pose startPose) {
         this.hardwareMap = hardwareMap;
         this.telemetry = telemetry;
         g1 = new NullGamepadTracker();
@@ -80,10 +90,12 @@ public class Robot {
                 .setCameraResolution(new Size(1920, 1200))
                 .setStreamFormat(VisionPortal.StreamFormat.MJPEG)
                 .build();
+
+        follower.setStartingPose(startPose);
     }
 
     // used for tele
-    public Robot(HardwareMap hardwareMap, Telemetry telemetry, GamepadTracker g1, GamepadTracker g2) {
+    public Robot(HardwareMap hardwareMap, Telemetry telemetry, GamepadTracker g1, GamepadTracker g2, Pose startPose) {
         this.hardwareMap = hardwareMap;
 
         this.telemetry = telemetry;
@@ -116,12 +128,15 @@ public class Robot {
 
         farPathChain = () -> follower.pathBuilder() //Lazy Curve Generation
                 .addPath(new Path(new BezierLine(follower::getPose, new Pose(params.farX, params.farY))))
-                .setHeadingInterpolation(HeadingInterpolator.linearFromPoint(follower::getHeading, params.farHeading, 0.8))
+                .setLinearHeadingInterpolation(follower.getHeading(), Math.toRadians(params.farHeading))
                 .build();
         nearPathChain = () -> follower.pathBuilder() //Lazy Curve Generation
-                .addPath(new Path(new BezierLine(follower::getPose, new Pose(45, 98))))
-                .setHeadingInterpolation(HeadingInterpolator.linearFromPoint(follower::getHeading, Math.toRadians(45), 0.8))
+                .addPath(new Path(new BezierLine(follower::getPose, new Pose(params.nearX, params.nearY))))
+                .setLinearHeadingInterpolation(follower.getHeading(), Math.toRadians(params.nearHeading))
                 .build();
+
+        autoTurnPid = new PIDFController(new PIDFCoefficients(params.kP, 0, params.kD, params.kF));
+        follower.setStartingPose(startPose);
     }
     public void updateTele() {
         updatePedroTele();
@@ -148,29 +163,37 @@ public class Robot {
             }
         }
         // 21: gpp, 22: pgp, 23: ppg
-        else
-            telemetry.addData("no tags found", "");
     }
     private void findPattern(ArrayList<AprilTagDetection> detections) {
     }
     public void initPedroTele() {
-        follower.setStartingPose(new Pose(65.025, -9, Math.PI));
         follower.startTeleopDrive();
         follower.update();
     }
     public void updatePedroTele() {
-        if(!automatedDrive) {
-            if(g1.isFirstLeftBumper()) {
-                automatedDrive = true;
-                follower.followPath(farPathChain.get());
-            }
-            else
-                follower.setTeleOpDrive(-g1.leftStickY(), -g1.leftStickX(), -g1.rightStickX() + g1.leftStickX() * params.turnCorrection, true);
+        if(g1.isFirstLeftBumper())
+            slowTurn = !slowTurn;
+
+        double turnPower = Range.clip(-g1.rightStickX() * params.turnAmpNormal + g1.leftStickX() * params.turnCorrection, -1, 1);
+        if(slowTurn) {
+            Vector goalVec = new Vector();
+            goalVec.setOrthogonalComponents(params.goalX - follower.getPose().getX(), params.goalY - follower.getPose().getY());
+            Vector perpGoal = new Vector();
+            perpGoal.setOrthogonalComponents(-goalVec.getYComponent(), goalVec.getXComponent());
+            Vector shooterVec = new Vector();
+            shooterVec.setOrthogonalComponents(-Math.cos(follower.getHeading()), -Math.sin(follower.getHeading()));
+            double dot = shooterVec.getXComponent() * perpGoal.getXComponent() + shooterVec.getYComponent() * perpGoal.getYComponent();
+            autoTurnPid.updateError(-dot);
+            turnPower = autoTurnPid.run();
+            telemetry.addData("goalVec", goalVec);
+            telemetry.addData("shooter vec", shooterVec);
+            telemetry.addData("dot", dot);
+            telemetry.addData("goal angle", Math.atan2(goalVec.getYComponent(), goalVec.getXComponent()));
+            telemetry.addData("shooter angle", Math.atan2(shooterVec.getYComponent(), shooterVec.getXComponent()));
+            telemetry.addData("turn power", turnPower);
         }
-        else if(!follower.isBusy()) {
-            automatedDrive = false;
-            follower.startTeleopDrive();
-        }
+
+        follower.setTeleOpDrive(-g1.leftStickY(), -g1.leftStickX(), turnPower, true);
         follower.update();
     }
     public double getBatteryVoltage() {

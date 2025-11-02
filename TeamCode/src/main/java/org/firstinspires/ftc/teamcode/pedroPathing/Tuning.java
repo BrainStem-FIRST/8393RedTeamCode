@@ -1055,7 +1055,9 @@ class CentripetalTuner extends OpMode {
     @Override
     public void loop() {
         follower.update();
+        Drawing.drawPath(forwards, new Style("white", "white", 2));
         drawCurrentAndHistory();
+
         if (!follower.isBusy()) {
             if (forward) {
                 forward = false;
@@ -1143,11 +1145,15 @@ class Triangle extends OpMode {
  * @version 1.0, 3/12/2024
  */
 class Circle extends OpMode {
-    public static double RADIUS = 10;
+    public static double RADIUS = 20;
     private PathChain circle;
 
     public void start() {
         circle = follower.pathBuilder()
+                .addPath(new BezierCurve(new Pose(2 * RADIUS, 0), new Pose(2 * RADIUS, -RADIUS), new Pose(RADIUS, -RADIUS)))
+                .setHeadingInterpolation(HeadingInterpolator.facingPoint(RADIUS, 0))
+                .addPath(new BezierCurve(new Pose(RADIUS, -RADIUS), new Pose(0, -RADIUS), new Pose(0, 0)))
+                .setHeadingInterpolation(HeadingInterpolator.facingPoint(RADIUS, 0))
                 .addPath(new BezierCurve(new Pose(0, 0), new Pose(RADIUS, 0), new Pose(RADIUS, RADIUS)))
                 .setHeadingInterpolation(HeadingInterpolator.facingPoint(0, RADIUS))
                 .addPath(new BezierCurve(new Pose(RADIUS, RADIUS), new Pose(RADIUS, 2 * RADIUS), new Pose(0, 2 * RADIUS)))
@@ -1156,6 +1162,7 @@ class Circle extends OpMode {
                 .setHeadingInterpolation(HeadingInterpolator.facingPoint(0, RADIUS))
                 .addPath(new BezierCurve(new Pose(-RADIUS, RADIUS), new Pose(-RADIUS, 0), new Pose(0, 0)))
                 .setHeadingInterpolation(HeadingInterpolator.facingPoint(0, RADIUS))
+                .addPath(new BezierCurve(new Pose(0, 0), new Pose(0, RADIUS), new Pose(RADIUS, RADIUS)))
                 .build();
         follower.followPath(circle);
     }
@@ -1198,7 +1205,7 @@ class Drawing {
     public static final double ROBOT_RADIUS = 9; // woah
     private static final FieldManager panelsField = PanelsField.INSTANCE.getField();
 
-    private static final Style robotLook = new Style(
+    public static final Style robotLook = new Style(
             "", "#3F51B5", 0.0
     );
     private static final Style historyLook = new Style(

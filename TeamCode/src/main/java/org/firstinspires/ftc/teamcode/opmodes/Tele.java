@@ -16,7 +16,7 @@ public class Tele extends LinearOpMode {
         GamepadTracker g1 = new GamepadTracker(gamepad1);
         GamepadTracker g2 = new GamepadTracker(gamepad2);
 
-        Robot robot = new Robot(hardwareMap, telemetry, g1, g2);
+        Robot robot = new Robot(hardwareMap, telemetry, g1, g2, new Pose(0, 0));
         robot.initPedroTele();
 
         waitForStart();

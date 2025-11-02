@@ -30,8 +30,8 @@ public class Constants {
             .yVelocity(31.37)
             .useBrakeModeInTeleOp(true);
     public static PinpointConstants localizerConstants = new PinpointConstants()
-            .forwardPodY(4)
-            .strafePodX(-6)
+            .forwardPodY(3.875) // 3.875
+            .strafePodX(-6.25) // 6.25
             .distanceUnit(DistanceUnit.INCH)
             .hardwareMapName("odo")
             .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
@@ -41,21 +41,19 @@ public class Constants {
             .mass(11.58)
             .forwardZeroPowerAcceleration(-61.89)
             .lateralZeroPowerAcceleration(-71.66)
-            .centripetalScaling(5)
+            .centripetalScaling(0.001)
 
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.5, 0, 0, 0))
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.2, 0, 0.02, 0.01))
             .useSecondaryTranslationalPIDF(true)
-            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.4, 0, 0.02, 0))
+            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.3, 0, 0.01, 0.01))
 
-            .headingPIDFCoefficients(new PIDFCoefficients(3, 0, 0.001, 0))
+            .headingPIDFCoefficients(new PIDFCoefficients(1.5, 0, 0.05, 0.02))
             .useSecondaryHeadingPIDF(true)
-            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(4, 0, 0.02, 0))
+            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2, 0, 0.02, 0.02))
 
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.03, 0, 0.00001, 0.6, 0.01))
-            .useSecondaryDrivePIDF(true)
-            .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0.08, 0, 0.000005, 0.6, 0.01));
-
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1.3, 1);
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.0025, 0, 0.000005, 0.6, 0.02))
+            .useSecondaryDrivePIDF(false);
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 6, 1);
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerConstants, hardwareMap)

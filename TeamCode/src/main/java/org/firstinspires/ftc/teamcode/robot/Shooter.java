@@ -16,24 +16,26 @@ import org.firstinspires.ftc.teamcode.utils.QuadRegression;
 public class Shooter {
     public static class Params {
         public double kP = 0.05, kI = 0, kD = 0.003, maxShooterPower = 0.8;
-        public double farDist = 145;
+        public double farDistTele = 151.7, farDistAuto = 145; // far dist auto is guessed
         public double nearDist = 65;
-        public double midDist = (farDist + nearDist) / 2;
+        public double midDist = (farDistTele + nearDist) / 2;
 
         public double initHoodPosFar = 0.08;
 
-        public double shooterVelocityFarTele = 400, shooterPowerFarTele = 0.655;
+        public double shooterVelocityFarTele = 400, shooterPowerFarTele = 0.67;
         public double shooterVelocityNear = 275, shooterPowerNear = 0.45;
-        public double shooterVelocityFarAuto = 395, shooterPowerFarAuto = 0.655;
+        public double shooterVelocityFarAuto = 390, shooterPowerFarAuto = 0.66;
+        public double minShooterVelFarAuto = 375, minShooterVelFarTele = 380, minShooterVelNear = 260;
         public double t = 0.2;
         public int minHoodPwm = 1800, maxHoodPwm = 1400;
         //y=0.000203197x^{2}-0.16259x+32.54614
         public double hoodTeleFarRegressA = 0.000203197, hoodTeleFarRegressB = -0.16259, hoodTeleFarRegressC = 32.54614;
         //y=0.0009x^{2}-0.4767x+63.8595
         public double hoodNearRegressA = 0.0009, hoodNearRegressB = -0.4767, hoodNearRegressC = 63.8595;
-        public double hoodAutoFarRegressA = 2.21031 * Math.pow(10, 14), hoodAutoFarRegressB = 0.911603;
+        public double hoodAutoFarRegressA = 2.21031 * Math.pow(10, 14), hoodAutoFarRegressB = 0.9;
         // y=(2.21031*10^14) * 0.911603^x
         public double manualHoodInc = 0.01, manualShooterInc = 5;
+        public double hoodOffset = -0.02;
     }
     public static Params params = new Params();
     private final Robot robot;
@@ -46,7 +48,7 @@ public class Shooter {
 
     // NL and NR signify the left and right near positions
     private double targetMotorPower;
-    private double targetMotorVel;
+    private double targetMotorVel, minMotorVel;
     private double targetHoodPos;
     private double motorVelOffset, hoodOffset;
     private final QuadRegression hoodTeleFarRegress, hoodNearRegress; // regressions output desired hood position as function of motor velocity (in degrees/s)
@@ -79,47 +81,57 @@ public class Shooter {
         shooterPid = new PIDController(params.kP, params.kI, params.kD);
         shooterPid.setOutputBounds(-params.maxShooterPower, params.maxShooterPower);
         shooterPid.setTarget(targetMotorVel);
+
+        hoodOffset = params.hoodOffset;
+        shouldShoot = true;
     }
 
     public void update() {
         if(robot.g1.isFirstY())
             shouldShoot = !shouldShoot;
-        if(robot.g1.isFirstBack())
-            zone = (zone + 1) % 3;
+        // zone changers
+        if(robot.g1.isFirstDpadUp())
+            zone = 1;
+        else if(robot.g1.isFirstDpadLeft())
+            zone = 2;
+        else if(robot.g1.isFirstDpadRight())
+            zone = 0;
 
-        double dist = distance();
         // automatically setting shooter hood and power
         if (zone == 0) {
             targetMotorVel = params.shooterVelocityFarTele + motorVelOffset;
+            minMotorVel = params.minShooterVelFarTele + motorVelOffset;
             targetMotorPower = params.shooterPowerFarTele;
             shooterPid.setTarget(targetMotorVel);
             targetHoodPos = Range.clip(Range.clip(hoodTeleFarRegress.f(getShooterVelocity()), 0, 1) + hoodOffset, 0, 1);
         }
         else if(zone == 1) {
             targetMotorVel = params.shooterVelocityNear + motorVelOffset;
+            minMotorVel = params.minShooterVelNear + motorVelOffset;
             targetMotorPower = params.shooterPowerNear;
             shooterPid.setTarget(targetMotorVel);
             targetHoodPos = Range.clip(Range.clip(hoodNearRegress.f(getShooterVelocity()), 0, 1) + hoodOffset, 0, 1);
         }
         else if(zone == 2) {
             targetMotorVel = params.shooterVelocityFarAuto + motorVelOffset;
+            minMotorVel = params.minShooterVelFarAuto + motorVelOffset;
             targetMotorPower = params.shooterPowerFarAuto;
             shooterPid.setTarget(targetMotorVel);
             targetHoodPos = Range.clip(Range.clip(hoodAutoFarRegress.f(getShooterVelocity()), 0, 1) + hoodOffset, 0, 1);
         }
 
         // setting hood position
-        if(robot.g1.isFirstDpadUp())
+        if(robot.g2.isFirstDpadUp())
             hoodOffset += params.manualHoodInc;
-        else if(robot.g1.isFirstDpadDown())
+        else if(robot.g2.isFirstDpadDown())
             hoodOffset -= params.manualHoodInc;
 
         // setting shooter power
-        if(robot.g1.isFirstDpadRight()) {
+        if(robot.g2.isFirstDpadRight()) {
             motorVelOffset += params.manualShooterInc;
             shooterPid.setTarget(targetMotorVel + motorVelOffset);
         }
-        else if(robot.g1.isFirstDpadLeft()) {
+        else if(robot.g2.isFirstDpadLeft()) {
             motorVelOffset -= params.manualShooterInc;
             shooterPid.setTarget(targetMotorVel + motorVelOffset);
         }
@@ -146,6 +158,9 @@ public class Shooter {
     public int getZone() {
         return zone;
     }
+    public void setZone(int zone) {
+        this.zone = zone;
+    }
     private void setShooterPower(double power) {
         motor1.setPower(power);
         motor2.setPower(-power);
@@ -162,6 +177,9 @@ public class Shooter {
     }
     public double getShooterVelocity() {
         return (motor1.getVelocity(AngleUnit.DEGREES) - motor2.getVelocity(AngleUnit.DEGREES)) * 0.5;
+    }
+    public double getMinShooterVel() {
+        return minMotorVel;
     }
     public double getShooterPower() {
         return motor1.getPower();
