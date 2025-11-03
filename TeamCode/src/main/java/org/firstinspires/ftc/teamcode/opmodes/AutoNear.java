@@ -30,8 +30,7 @@ public class AutoNear extends LinearOpMode {
     public static Params params = new Params();
     private Robot robot;
     private Pose startPose, obeliskReadPose, shootPose, preCollect1Pose, collect1Pose, preCollect2Pose, collect2Pose;
-    private Path cameraPath;
-    private PathChain shoot1Path, preCollect1Path, shoot2Path, preCollect2Path, shoot3Path;
+    private PathChain shootAndCameraPath, preCollect1Path, shoot2Path, preCollect2Path, shoot3Path;
 
     private int pathNum;
     private ElapsedTime pathTimer;
@@ -60,13 +59,13 @@ public class AutoNear extends LinearOpMode {
         robot.intake.setIntakeSafely(true);
         robot.transfer.setShootSafely(true);
 
-        cameraPath = new Path(new BezierLine(startPose, obeliskReadPose));
-        cameraPath.setLinearHeadingInterpolation(startPose.getHeading(), obeliskReadPose.getHeading());
-
-        shoot1Path = robot.follower.pathBuilder()
+        shootAndCameraPath = robot.follower.pathBuilder()
+                .addPath(new BezierLine(startPose, obeliskReadPose))
+                .setLinearHeadingInterpolation(startPose.getHeading(), obeliskReadPose.getHeading())
                 .addPath(new BezierLine(obeliskReadPose, shootPose))
                 .setLinearHeadingInterpolation(obeliskReadPose.getHeading(), shootPose.getHeading())
                 .build();
+
         preCollect1Path = robot.follower.pathBuilder()
                 .addPath(new BezierLine(shootPose, preCollect1Pose))
                 .setLinearHeadingInterpolation(shootPose.getHeading(), preCollect1Pose.getHeading())
@@ -127,15 +126,12 @@ public class AutoNear extends LinearOpMode {
     private void updatePedroAuto() {
         switch(pathNum) {
             case 0:
-                updatePath(cameraPath);
+                updatePath(shootAndCameraPath);
                 break;
             case 1:
-                if(!robot.follower.isBusy()) {
-                    updatePath(shoot1Path);
-                }
-                break;
-            case 2:
-                robot.updateAprilTag();
+                // start checking april tag after robot passes certain point
+                if(robot.follower.getPose().getX() >= obeliskReadPose.getX())
+                    robot.updateAprilTag();
                 if(Robot.params.greenPos != -1 && !rotatedYet) {
                     rotatedYet = true;
                     robot.indexer.rotate(robot.indexer.getAlignIndexerOffset());
@@ -150,14 +146,14 @@ public class AutoNear extends LinearOpMode {
                     }
                 }
                 break;
-            case 3:
-            case 6:
+            case 2:
+            case 5:
                 if(!robot.follower.isBusy()) {
                     updatePath();
                     robot.follower.startTeleopDrive();
                 }
                 break;
-            case 4:
+            case 3:
                 if(robot.indexer.getNumBalls() < 3 && robot.follower.getPose().getX() > collect1Pose.getX()) {
                     pidDriveY(collect1Pose);
                 }
@@ -167,7 +163,7 @@ public class AutoNear extends LinearOpMode {
                     robot.indexer.rotate(robot.indexer.getAlignIndexerOffset());
                 }
                 break;
-            case 5:
+            case 4:
                 if(!robot.follower.isBusy()) {
                     if (robot.indexer.getNumBalls() > 0)
                         robot.transfer.setShootAll(true);
@@ -178,7 +174,7 @@ public class AutoNear extends LinearOpMode {
                     }
                 }
                 break;
-            case 7:
+            case 6:
                 if(robot.indexer.getNumBalls() < 3 && robot.follower.getPose().getX() > collect2Pose.getX()) {
                     pidDriveY(collect2Pose);
                 }
@@ -189,7 +185,7 @@ public class AutoNear extends LinearOpMode {
                 }
 
                 break;
-            case 8:
+            case 7:
                 if(!robot.follower.isBusy())
                     robot.transfer.setShootAll(robot.indexer.getNumBalls() >= 0);
                 break;
