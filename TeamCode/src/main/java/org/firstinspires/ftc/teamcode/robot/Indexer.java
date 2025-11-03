@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.robot;
 
+import android.sax.StartElementListener;
+
 import com.acmerobotics.dashboard.config.Config;
 import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.control.PIDFController;
@@ -14,16 +16,17 @@ import org.firstinspires.ftc.teamcode.utils.ColorSensorBall.BallColor;
 @Config
 public class Indexer {
     public static class Params {
-        public double indexerVelocityStaticThreshold = 1, prettyMuchStatic = 400;
-        public double manualIndexPowerAmp = 0.4;
+        public double indexerVelocityStaticThreshold = 1, prettyMuchStatic = 400, minShootError = 200;
+        public double manualIndexPowerAmp = 0.1;
         public int greenPos = 0; // ranges 0-2 (0=green should be shot first, 2=green should be shot last)
         public double csResponseDelay = 0;
-        public double kPClockwise60 = 0.000225, kPCounter60 = 0.00026, kPClockwise120 = 0.000165, kPCounter120 = 0.0002, kPClockwise180 = 0.00017;
-        public double kI = 0, kD = 0, kF = 0.01;
+        public double kPClockwise60 = 0.0002, kPCounter60 = 0.000245, kPClockwise120 = 0.00015, kPCounter120 = 0.00018, kPClockwise180 = 0.00016;
+        public double kI = 0, kD = 0, kF = 0.01, minPower = 0.085;
         public double thirdRotateAmount = 2733.333333; // encoders needed to rotate 120 degrees
         public double oscillateAmount = 50;
         public int errorThreshold = 75;
-        public double timeSinceLastRotateThreshold = 0.4; // after each rotation, i will recheck all valid color sensors for this amount of time
+        public double lightFlashTime = 0.3; // time that light flashes for after each color sensor recognition
+        public double timeSinceLastRotateThreshold = 1; // after each rotation, i will recheck all valid color sensors for this amount of time
     }
     public static Params params = new Params();
 
@@ -48,9 +51,8 @@ public class Indexer {
     private int curPatternI; // current pattern color selected
     private boolean shouldAutoRotate;
     private boolean autoRotateCued;
-    private final ElapsedTime indexerAutoRotateTimer, timeSinceLastRotate;
-
-    // testing; temporary
+    private final ElapsedTime indexerAutoRotateTimer, timeSinceLastRotate, lightTimer;
+    private double intakeOffset;
 
     public Indexer(Robot robot) {
         this.robot = robot;
@@ -70,6 +72,7 @@ public class Indexer {
         autoRotateCued = false;
         indexerAutoRotateTimer = new ElapsedTime();
         timeSinceLastRotate = new ElapsedTime();
+        lightTimer = new ElapsedTime();
 
         ballList = new BallColor[] {BallColor.N, BallColor.N, BallColor.N, BallColor.N, BallColor.N, BallColor.N};
         intakeI = 0;
@@ -97,39 +100,13 @@ public class Indexer {
         leftCS.update();
         rightCS.update();
         midCS.update();
-    }
-    private void updateIndexer() {
-        // listening for gamepad input to index
-        if (robot.transfer.getTransferState() == Transfer.TransferState.OFF) {
-            if (robot.g1.isFirstB())
-                rotate(1);
-            else if (robot.g1.isFirstA())
-                rotate(-1);
+        // updating color sensor values
+        if (shouldAutoRotate && prettyMuchStatic()
+        && (robot.intake.getIntakeState() != Intake.IntakeState.OFF || timeSinceLastRotate.seconds() < params.timeSinceLastRotateThreshold)) {
 
-            // updating color sensor values
-            else if (shouldAutoRotate && prettyMuchStatic() && (robot.intake.getIntakeState() != Intake.IntakeState.OFF || timeSinceLastRotate.seconds() < params.timeSinceLastRotateThreshold)) {
-                // potentially check left and right sensors if indexer is at correct offset
-                if (intakeI % 2 == 1) {
-                    boolean ballAtLeft = shouldCheckLeftCS && emptyAt(getLeftIntakeI()) && leftCS.getBallColor() != BallColor.N;
-                    if (ballAtLeft) {
-                        ballList[getLeftIntakeI()] = leftCS.getBallColor();
-                        numBalls++;
-                        this.ballAtLeft = true;
-                    }
-                    boolean ballAtRight = shouldCheckRightCS && emptyAt(getRightIntakeI()) && rightCS.getBallColor() != BallColor.N;
-                    if (ballAtRight) {
-                        ballList[getRightIntakeI()] = rightCS.getBallColor();
-                        numBalls++;
-                        this.ballAtRight = true;
-                    }
-                    if (ballAtLeft || ballAtRight) {
-                        indexerAutoRotateTimer.reset();
-                        autoRotateCued = true;
-                    }
-                    ballAtMid = false;
-                }
-                // potentially check middle sensor if indexer at correct offset
-                else if (shouldCheckMidCS && emptyAt(intakeI) && midCS.getBallColor() != BallColor.N) {
+            // potentially check middle sensor if indexer at correct offset
+            if(intakeI % 2 == intakeOffset) {
+                if (shouldCheckMidCS && emptyAt(intakeI) && midCS.getBallColor() != BallColor.N) {
                     ballAtMid = true;
                     ballAtLeft = false;
                     ballAtRight = false;
@@ -139,6 +116,38 @@ public class Indexer {
                     autoRotateCued = true;
                 }
             }
+            // potentially check left and right sensors if indexer is at correct offset
+            else {
+                boolean ballAtLeft = shouldCheckLeftCS && emptyAt(getLeftIntakeI()) && leftCS.getBallColor() != BallColor.N;
+                if (ballAtLeft) {
+                    ballList[getLeftIntakeI()] = leftCS.getBallColor();
+                    numBalls++;
+                    this.ballAtLeft = true;
+                }
+                boolean ballAtRight = shouldCheckRightCS && emptyAt(getRightIntakeI()) && rightCS.getBallColor() != BallColor.N;
+                if (ballAtRight) {
+                    ballList[getRightIntakeI()] = rightCS.getBallColor();
+                    numBalls++;
+                    this.ballAtRight = true;
+                }
+                if (ballAtLeft || ballAtRight) {
+                    indexerAutoRotateTimer.reset();
+                    autoRotateCued = true;
+                }
+                ballAtMid = false;
+            }
+
+            if(autoRotateCued)
+                lightTimer.reset();
+        }
+    }
+    private void updateIndexer() {
+        // listening for gamepad input to index
+        if (robot.transfer.getTransferState() == Transfer.TransferState.OFF) {
+            if (robot.g1.isFirstB())
+                rotate(1);
+            else if (robot.g1.isFirstA())
+                rotate(-1);
         }
 
         // calculating indexer power
@@ -150,7 +159,7 @@ public class Indexer {
             else {
                 indexerPid.updatePosition(getIndexerEncoderTracker());
                 indexPower = indexerPid.run();
-                indexPower *= -1;
+                indexPower = Math.max(Math.abs(indexPower), params.minPower) * Math.signum(indexPower) * -1;
             }
         }
         if(indexPower != prevIndexPower)
@@ -210,7 +219,7 @@ public class Indexer {
     // returns offset to rotate indexer to align it to next pattern color (pos=clockwise, neg=ccw, -10=no valid pattern color)
     public int getAlignIndexerOffset() {
         if(numBalls == 0)
-            return intakeI % 2;
+            return 1;
         BallColor desiredColor = curPatternI == Robot.params.greenPos ? BallColor.G : BallColor.P;
         int desiredI = findBallI(desiredColor);
         if(desiredI == -1) // finding index of other color ball if there is no balls of correct color
@@ -374,10 +383,14 @@ public class Indexer {
     public void setAutoRotate(boolean shouldAutoRotate) {
         this.shouldAutoRotate = shouldAutoRotate;
     }
-    public void setBallList(BallColor b1, BallColor b2, BallColor b3) {
-        ballList[intakeI] = b1;
-        ballList[getOffsetI(getShooterI(), -1)] = b2;
-        ballList[getOffsetI(getShooterI(), 1)] = b3;
+    public void setAutoBallList(int offset, BallColor b1, BallColor b2, BallColor b3) {
+        intakeOffset = offset;
+        ballList[intakeI + offset] = b1;
+        ballList[getOffsetI(intakeI + offset, 2)] = b2;
+        ballList[getOffsetI(intakeI + offset, 4)] = b3;
         numBalls = 3;
+    }
+    public double getLightTimerSeconds() {
+        return lightTimer.seconds();
     }
 }

@@ -7,8 +7,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 public class Transfer {
     public static class Params {
         public int transferInPwm = 610, transferShootPwm = 850;
-        public int transferStopperDownPwm = 2310, transferStopperUpPwm = 2450;
-        public double transferMoveTime = 0.13, transferStopperMoveTime = 0.1, transferResetTime = 0.05;
+        public int transferStopperDownPwm = 2300, transferStopperUpPwm = 2450;
+        public double transferMoveTime = 0.2, transferStopperMoveTime = 0.1, transferResetTime = 0.05;
     }
     public static Params params = new Params();
 
@@ -21,8 +21,7 @@ public class Transfer {
         OFF, RESETTING, TRANSFERRING
     }
     private TransferState transferState;
-    private boolean shouldShootAll;
-
+    private boolean shouldShootAll, shouldShootSafely;
     public Transfer(Robot robot) {
         this.robot = robot;
 
@@ -36,11 +35,14 @@ public class Transfer {
 
         transferTimer = new ElapsedTime();
         transferState = TransferState.OFF;
+        shouldShootSafely = false;
     }
     public void update() {
         switch(transferState) {
             case OFF:
-                if((robot.g1.rightBumper() || shouldShootAll) && robot.indexer.prettyMuchStatic() && robot.shooter.getShooterVelocity() > robot.shooter.getMinShooterVel())
+                if((robot.g1.rightBumper() || shouldShootAll)
+                && robot.indexer.prettyMuchStatic() && robot.indexer.getIndexerError() < Indexer.params.minShootError
+                && (!shouldShootSafely || robot.shooter.getShooterVelocity() > robot.shooter.getMinShooterVel()))
                     setTransferTransferring();
                 break;
             case TRANSFERRING:
@@ -50,13 +52,14 @@ public class Transfer {
                         robot.indexer.simulateShot();
                     }
                 }
-                if(transferTimer.seconds() > params.transferStopperMoveTime + params.transferMoveTime)
+                if(transferTimer.seconds() > params.transferStopperMoveTime + params.transferMoveTime) {
                     setTransferResetting();
+                    robot.indexer.rotate(robot.indexer.getAlignIndexerOffset());
+                }
                 break;
             case RESETTING:
                 if(transferTimer.seconds() > params.transferResetTime) {
                     setTransferOff();
-                    robot.indexer.rotate(robot.indexer.getAlignIndexerOffset());
                 }
         }
     }
@@ -69,10 +72,10 @@ public class Transfer {
         transferState = TransferState.RESETTING;
         transferTimer.reset();
         transfer.setPosition(0);
-        transferStopper.setPosition(0);
     }
     private void setTransferOff() {
         transferState = TransferState.OFF;
+        transferStopper.setPosition(0);
     }
     public TransferState getTransferState() {
         return transferState;
@@ -82,5 +85,8 @@ public class Transfer {
     }
     public boolean shouldShootAll() {
         return shouldShootAll;
+    }
+    public void setShootSafely(boolean safely) {
+        shouldShootSafely = safely;
     }
 }

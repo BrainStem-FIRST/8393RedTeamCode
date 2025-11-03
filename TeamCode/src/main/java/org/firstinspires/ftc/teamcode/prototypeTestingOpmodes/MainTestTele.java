@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.opmodes.Auto;
+import org.firstinspires.ftc.teamcode.opmodes.AutoFar;
 import org.firstinspires.ftc.teamcode.robot.Robot;
 import org.firstinspires.ftc.teamcode.utils.ColorSensorBall;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
@@ -17,7 +17,7 @@ public class MainTestTele extends LinearOpMode {
         telemetry.setMsTransmissionInterval(11);
         GamepadTracker g1 = new GamepadTracker(gamepad1);
         GamepadTracker g2 = new GamepadTracker(gamepad2);
-        Robot robot = new Robot(hardwareMap, telemetry, g1, g2, new Pose(Auto.params.startX, Auto.params.startY, Math.toRadians(Auto.params.startA)));
+        Robot robot = new Robot(hardwareMap, telemetry, g1, g2, new Pose(AutoFar.params.startX, AutoFar.params.startY, Math.toRadians(AutoFar.params.startA)));
         robot.initPedroTele();
         waitForStart();
         ElapsedTime timer = new ElapsedTime();
@@ -30,6 +30,7 @@ public class MainTestTele extends LinearOpMode {
             robot.indexer.update();
             robot.transfer.update();
             robot.shooter.update();
+            robot.light.update();
 
             telemetry.addData("fps", 1/(timer.seconds()-prevSec));
             telemetry.addData("voltage", robot.getBatteryVoltage());
@@ -78,6 +79,7 @@ public class MainTestTele extends LinearOpMode {
             telemetry.addLine("PARK----");
             telemetry.addData("  park state", robot.parker.getParkState());
             telemetry.addData("  park encoder", robot.parker.getMotorPos());
+            telemetry.addData("lightvalue", robot.light.getLightValue());
 
             telemetry.addLine("PEDRO----");
             telemetry.addData("  x", robot.follower.getPose().getX());

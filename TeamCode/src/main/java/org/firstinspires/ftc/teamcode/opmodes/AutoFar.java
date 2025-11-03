@@ -14,8 +14,8 @@ import org.firstinspires.ftc.teamcode.robot.Robot;
 import org.firstinspires.ftc.teamcode.utils.ColorSensorBall.BallColor;
 
 @Config
-@Autonomous(name="Auto")
-public class Auto extends LinearOpMode {
+@Autonomous(name="AutoFar")
+public class AutoFar extends LinearOpMode {
     public static class Params {
         public double startX = 56.875, startY = 9.75, startA = -90;
         public double shootX = 53.905, shootY = 14.62, shootA = -70.07;
@@ -32,6 +32,7 @@ public class Auto extends LinearOpMode {
     private PathChain preCollect1Path, collect1Path, shoot2Path;
     @Override
     public void runOpMode() throws InterruptedException {
+        Robot.params.greenPos = -1;
         telemetry.setMsTransmissionInterval(11);
 
         startPose = new Pose(params.startX, params.startY, Math.toRadians(params.startA));
@@ -43,7 +44,7 @@ public class Auto extends LinearOpMode {
         robot = new Robot(hardwareMap, telemetry, startPose);
         robot.intake.setIntakeSafely(true); // want intake to auto stop when indexing to prevent jams
         robot.indexer.setAutoRotate(true);
-        robot.indexer.setBallList(BallColor.P, BallColor.G, BallColor.P);
+        robot.indexer.setAutoBallList(1, BallColor.G, BallColor.P, BallColor.P);
         robot.shooter.setZone(2);
         pathNum = 0;
 
@@ -89,7 +90,7 @@ public class Auto extends LinearOpMode {
     }
 
     private void updateAuto() {
-        robot.updateAuto();
+        robot.updateAprilTag();
         robot.intake.update();
         robot.indexer.update();
         robot.transfer.update();
@@ -112,7 +113,6 @@ public class Auto extends LinearOpMode {
                         robot.transfer.setShootAll(false);
                         updatePath(preCollect1Path);
                         robot.intake.setIntake(true);
-                        robot.indexer.rotate(1);
                     }
                 break;
             case 2:

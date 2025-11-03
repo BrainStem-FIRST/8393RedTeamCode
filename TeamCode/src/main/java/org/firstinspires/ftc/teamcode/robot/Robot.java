@@ -39,6 +39,7 @@ public class Robot {
     public final Transfer transfer;
     public final Shooter shooter;
     public final Parker parker;
+    public final Light light;
 
     private boolean automatedDrive;
     private Supplier<PathChain> farPathChain, nearPathChain;
@@ -46,7 +47,7 @@ public class Robot {
     private final AprilTagProcessor tagProcessor;
     private final VisionPortal visionPortal;
     public static class Params {
-        public double goalX = 3, goalY = 141;
+        public double goalX = 3, goalY = 138;
         public double farX = 86.3, farY = 16, farHeading = -65;
         public double nearX = 52.7, nearY = 89.6, nearHeading = -45;
         public double turnCorrection = 0.14, turnAmpNormal = 0.8, turnAmpSlow = 0.2;
@@ -56,7 +57,8 @@ public class Robot {
         public double intakeToWheelCenter = wheelToWheelL / 2 + intakeToFrontWheelL;
         public double backToWheelCenter = wheelToWheelL / 2 + backToBackWheelL;
         public double tickW = 0.8;
-        public double kP = 0.004, kD = 0.01, kF = 0.1;
+        public double kP = 0.004, kD = 0, kF = 0;
+        public double minShooterTurn = 0.08, headingShootError = 2;
     }
     private PIDFController autoTurnPid;
     private boolean slowTurn;
@@ -74,6 +76,7 @@ public class Robot {
         shooter = new Shooter(this);
         parker = new Parker(this);
         follower = Constants.createFollower(hardwareMap);
+        light = new Light(this);
 
         //Focals (pixels) - Fx: 628.438 Fy: 628.438
         //Optical center - Cx: 986.138 Cy: 739.836
@@ -107,6 +110,7 @@ public class Robot {
         transfer = new Transfer(this);
         shooter = new Shooter(this);
         parker = new Parker(this);
+        light = new Light(this);
         follower = Constants.createFollower(hardwareMap);
 
         //Focals (pixels) - Fx: 628.438 Fy: 628.438
@@ -142,14 +146,10 @@ public class Robot {
         updatePedroTele();
         updateAprilTag();
     }
-    public void updateAuto() {
-        updateAprilTag();
-    }
-    private void updateAprilTag() {
+    public void updateAprilTag() {
         telemetry.addData("camera state", visionPortal.getCameraState());
         ArrayList<AprilTagDetection> detections = tagProcessor.getDetections();
         if (!detections.isEmpty()) {
-
             for(int i = 0; i < detections.size(); i++) {
                 AprilTagDetection tag = tagProcessor.getDetections().get(i);
 
@@ -171,27 +171,38 @@ public class Robot {
         follower.update();
     }
     public void updatePedroTele() {
+        double goalHeading = Math.atan2(follower.getPose().getY() - params.goalY, follower.getPose().getX() - params.goalX);
         if(g1.isFirstLeftBumper())
             slowTurn = !slowTurn;
 
         double turnPower = Range.clip(-g1.rightStickX() * params.turnAmpNormal + g1.leftStickX() * params.turnCorrection, -1, 1);
         if(slowTurn) {
-            Vector goalVec = new Vector();
-            goalVec.setOrthogonalComponents(params.goalX - follower.getPose().getX(), params.goalY - follower.getPose().getY());
-            Vector perpGoal = new Vector();
-            perpGoal.setOrthogonalComponents(-goalVec.getYComponent(), goalVec.getXComponent());
-            Vector shooterVec = new Vector();
-            shooterVec.setOrthogonalComponents(-Math.cos(follower.getHeading()), -Math.sin(follower.getHeading()));
-            double dot = shooterVec.getXComponent() * perpGoal.getXComponent() + shooterVec.getYComponent() * perpGoal.getYComponent();
-            autoTurnPid.updateError(-dot);
-            turnPower = autoTurnPid.run();
-            telemetry.addData("goalVec", goalVec);
-            telemetry.addData("shooter vec", shooterVec);
-            telemetry.addData("dot", dot);
-            telemetry.addData("goal angle", Math.atan2(goalVec.getYComponent(), goalVec.getXComponent()));
-            telemetry.addData("shooter angle", Math.atan2(shooterVec.getYComponent(), shooterVec.getXComponent()));
-            telemetry.addData("turn power", turnPower);
+//            Vector goalVec = new Vector();
+//            goalVec.setOrthogonalComponents(params.goalX - follower.getPose().getX(), params.goalY - follower.getPose().getY());
+//            Vector perpGoal = new Vector();
+//            perpGoal.setOrthogonalComponents(-goalVec.getYComponent(), goalVec.getXComponent());
+//            Vector shooterVec = new Vector();
+//            shooterVec.setOrthogonalComponents(-Math.cos(follower.getHeading()), -Math.sin(follower.getHeading()));
+//            double dot = shooterVec.getXComponent() * perpGoal.getXComponent() + shooterVec.getYComponent() * perpGoal.getYComponent();
+//            autoTurnPid.updateError(-dot);
+            if(Math.abs(goalHeading - follower.getHeading()) < params.headingShootError * Math.PI / 180)
+                slowTurn = false;
+            else {
+                autoTurnPid.updateError(goalHeading - follower.getHeading());
+                turnPower = autoTurnPid.run();
+                turnPower = Math.max(params.minShooterTurn, Math.abs(turnPower)) * Math.signum(turnPower);
+//            telemetry.addData("goalVec", goalVec);
+//            telemetry.addData("shooter vec", shooterVec);
+//            telemetry.addData("dot", dot);
+//            telemetry.addData("goal angle", Math.atan2(goalVec.getYComponent(), goalVec.getXComponent()));
+//            telemetry.addData("shooter angle", Math.atan2(shooterVec.getYComponent(), shooterVec.getXComponent()));
+            }
         }
+        telemetry.addData("dx", params.goalX - follower.getPose().getX());
+        telemetry.addData("dy", params.goalY - follower.getPose().getY());
+        telemetry.addData("goalHeading", Math.floor(goalHeading * 180 / Math.PI));
+        telemetry.addData("robot heading", Math.floor(follower.getHeading() * 180 / Math.PI));
+        telemetry.addData("turn power", turnPower);
 
         follower.setTeleOpDrive(-g1.leftStickY(), -g1.leftStickX(), turnPower, true);
         follower.update();

@@ -101,7 +101,7 @@ The readme.md file located in the [/TeamCode/src/main/java/org/firstinspires/ftc
   find another means to communicate failure.  The design intent of setGlobalErrorMsg() is to report an 
   error and force the user to restart the robot, which in certain circumstances when used inappropriately
   could cause a robot to continue running while Driver Station controls are disabled.  To prevent this,
-  processing of a call to setGlobalErrorMsg() is deferred until the robot is in a known safe state.  This may
+  processing of a call to setGlobalErrorMsg() is deferred until the robot is in a known safe lightState.  This may
   mean that a call to setGlobalErrorMsg() that does not also result in stopping a running OpMode will appear
   as though nothing happened until the robot is stopped, at which point, if clearGlobalErrorMsg() has not 
   been called the message will appear on the Driver Station and a restart will be required.
@@ -120,7 +120,7 @@ The readme.md file located in the [/TeamCode/src/main/java/org/firstinspires/ftc
 * Improved the OBJ new file creation flow workflow. The new flow allows you to easily use samples, craft new custom OpModes and make new Java classes.
 * Added support for gamepad edge detection.
   * A new sample program `ConceptGamepadEdgeDetection` demonstrates its use.
-* Adds a blackboard member to the Opmode that maintains state between opmodes (but not between robot resets).  See the ConceptBlackboard sample for how to use it.
+* Adds a blackboard member to the Opmode that maintains lightState between opmodes (but not between robot resets).  See the ConceptBlackboard sample for how to use it.
 * Updated PredominantColorProcessor to also return the predominant color in RGB, HSV and YCrCb color spaces.  Updated ConceptVisionColorSensor sample OpMode to display the getAnalysis() result in all three color spaces.
 * Adds support for the GoBilda Pinpoint 
   * Also adds `SensorGoBildaPinpoint` sample to show how to use it
@@ -407,7 +407,7 @@ The readme.md file located in the [/TeamCode/src/main/java/org/firstinspires/ftc
 * Adds Sample to illustrate optimizing camera exposure for AprilTags: ConceptAprilTagOptimizeExposure
 
 ### Bug Fixes
-* Corrects inspection screen to report app version using the SDK version defined in the libraries instead of the version specified in `AndroidManifest.xml`. This corrects the case where the app could show matching versions numbers to the user but still state that the versions did not match.
+* Corrects inspection screen to report app version using the SDK version defined in the libraries instead of the version specified in `AndroidManifest.xml`. This corrects the case where the app could show matching versions numbers to the user but still lightState that the versions did not match.
   * If the version specified in `AndroidManifest.xml` does not match the SDK version, an SDK version entry will be displayed on the Manage webpage.
 * Fixes no error being displayed when saving a configuration file with duplicate names from the Driver Station.
 * Fixes a deadlock in the UVC driver which manifested in https://github.com/OpenFTC/EasyOpenCV/issues/57.
@@ -521,7 +521,7 @@ This is a bug fix only release to address the following four issues.
 ### Enhancements
 * Uncaught exceptions in OpModes no longer require a Restart Robot
   * A blue screen popping up with a stacktrace is not an SDK error; this replaces the red text in the telemetry area.
-  * Since the very first SDK release, OpMode crashes have put the robot into "EMERGENCY STOP" state, only showing the first line of the exception, and requiring the user to press "Restart Robot" to continue
+  * Since the very first SDK release, OpMode crashes have put the robot into "EMERGENCY STOP" lightState, only showing the first line of the exception, and requiring the user to press "Restart Robot" to continue
   * Exceptions during an OpMode now open a popup window with the same color scheme as the log viewer, containing 15 lines of the exception stacktrace to allow easily tracing down the offending line without needing to connect to view logs over ADB or scroll through large amounts of logs in the log viewer.
   * The exception text in the popup window is both zoomable and scrollable just like a webpage.
   * Pressing the "OK" button in the popup window will return to the main screen of the Driver Station and allow an OpMode to be run again immediately, without the need to perform a "Restart Robot"
@@ -939,7 +939,7 @@ Version 5.5 requires Android Studio 4.0 or later.
         * Specifies whether the condition is current or occurred temporarily during an OpMode run
     * Clarifies warning when Expansion Hub is not present at startup
         * Specifies that this condition requires a Robot Restart before the hub can be used.
-        * The hub light will now accurately reflect this state
+        * The hub light will now accurately reflect this lightState
     * Improves logging and reduces log spam during these conditions
 * Syncs the Control Hub time and timezone to a connected web browser programming the robot, if a Driver Station is not available.
 * Adds bulk read functionality for REV Hubs
@@ -1004,8 +1004,8 @@ Version 5.5 requires Android Studio 4.0 or later.
 * Allows a REV Control Hub to update the firmware on a REV Expansion Hub via USB
 * Fixes [SkyStone issue #9](https://github.com/FIRST-Tech-Challenge/SkyStone/issues/9)
 * Fixes [ftc_app issue #715](https://github.com/ftctechnh/ftc_app/issues/715)
-* Prevents extra DS User clicks by filtering based on current state.
-* Prevents incorrect DS UI state changes when receiving new OpMode list from RC
+* Prevents extra DS User clicks by filtering based on current lightState.
+* Prevents incorrect DS UI lightState changes when receiving new OpMode list from RC
 * Adds support for REV Color Sensor V3
 * Adds a manual-refresh DS Camera Stream for remotely viewing RC camera frames.
     * To show the stream on the DS, initialize **but do not run** a stream-enabled opmode, select the Camera Stream option in the DS menu, and tap the image to refresh. This feature is automatically enabled when using Vuforia or TFOD—no additional RC configuration is required for typical use cases. To hide the stream, select the same menu item again.

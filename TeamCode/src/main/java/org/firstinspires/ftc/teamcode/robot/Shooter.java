@@ -22,17 +22,17 @@ public class Shooter {
 
         public double initHoodPosFar = 0.08;
 
-        public double shooterVelocityFarTele = 400, shooterPowerFarTele = 0.67;
-        public double shooterVelocityNear = 275, shooterPowerNear = 0.45;
-        public double shooterVelocityFarAuto = 390, shooterPowerFarAuto = 0.66;
-        public double minShooterVelFarAuto = 375, minShooterVelFarTele = 380, minShooterVelNear = 260;
+        public double shooterVelocityFarTele = 400, shooterPowerFarTele = 0.68;
+        public double shooterVelocityNear = 280, shooterPowerNear = 0.45;
+        public double shooterVelocityFarAuto = 395, shooterPowerFarAuto = 0.67;
+        public double minShooterVelFarAuto = 370, minShooterVelFarTele = 375, minShooterVelNear = 250;
         public double t = 0.2;
         public int minHoodPwm = 1800, maxHoodPwm = 1400;
         //y=0.000203197x^{2}-0.16259x+32.54614
         public double hoodTeleFarRegressA = 0.000203197, hoodTeleFarRegressB = -0.16259, hoodTeleFarRegressC = 32.54614;
         //y=0.0009x^{2}-0.4767x+63.8595
         public double hoodNearRegressA = 0.0009, hoodNearRegressB = -0.4767, hoodNearRegressC = 63.8595;
-        public double hoodAutoFarRegressA = 2.21031 * Math.pow(10, 14), hoodAutoFarRegressB = 0.9;
+        public double hoodAutoFarRegressA = 2.21031 * Math.pow(10, 14), hoodAutoFarRegressB = 0.9116;
         // y=(2.21031*10^14) * 0.911603^x
         public double manualHoodInc = 0.01, manualShooterInc = 5;
         public double hoodOffset = -0.02;
@@ -141,7 +141,9 @@ public class Shooter {
             shooterPower = 0;
             if (shouldShoot) {
                 // params.t is a value between 0 and 1 (I have it set to 0.9)
-                shooterPower = shooterPid.update(getShooterVelocity()) * params.t + targetMotorPower * (1 - params.t);
+                double pid = shooterPid.update(getShooterVelocity());
+                robot.telemetry.addData("shooter pid", pid);
+                shooterPower = pid * params.t + targetMotorPower * (1 - params.t);
             }
 
             if(shooterPower != prevShooterPower)
@@ -171,7 +173,19 @@ public class Shooter {
     public double getHoodOffset() {
         return hoodOffset;
     }
-
+    public void incMotorPowerOffset() {
+        switch(zone) {
+            case 0:
+                params.shooterPowerFarTele += params.manualShooterInc;
+                break;
+            case 1:
+                params.shooterPowerNear += params.manualShooterInc;
+                break;
+            case 2:
+                params.shooterPowerFarAuto += params.manualShooterInc;
+                break;
+        }
+    }
     public double distance(){
         return Math.sqrt(Math.pow(robot.follower.getPose().getX()-Robot.params.goalX, 2) + Math.pow(robot.follower.getPose().getY()-Robot.params.goalY, 2));
     }
