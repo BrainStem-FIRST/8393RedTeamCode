@@ -36,7 +36,7 @@ public class Intake {
                 if(postCollectTimer.seconds() > postCollectTime)
                     setStateOff();
             case OFF:
-                if(intakeSafely && !robot.indexer.prettyMuchStatic())
+                if(intakeSafely && !robot.indexer.prettyMuchStaticCS())
                     return;
 
                 if(listenCollectInput() || shouldIntake)
@@ -45,7 +45,7 @@ public class Intake {
                     setStateCollecting(-collectPower);
                 break;
             case COLLECTING:
-                if(intakeSafely && !robot.indexer.prettyMuchStatic()) // auto checking for indexer movement
+                if(intakeSafely && !robot.indexer.prettyMuchStaticCS()) // auto checking for indexer movement
                     setStateOff();
                 else if(!listenCollectInput() && !listenExtakeInput() && !shouldIntake)
                     setStatePostCollecting();
@@ -62,6 +62,7 @@ public class Intake {
     }
     private void setStateOff() {
         intakeState = IntakeState.OFF;
+        motorPower = 0;
     }
     private void setStateCollecting(double power) {
         intakeState = IntakeState.COLLECTING;
@@ -71,7 +72,7 @@ public class Intake {
         return intakeState;
     }
     public double getIntakePower() {
-        return intake.getPower();
+        return motorPower;
     }
     private boolean listenCollectInput() {
         return robot.g1.rightTrigger() > 0.1;

@@ -49,7 +49,7 @@ public class Constants {
             .headingPIDFCoefficients(new PIDFCoefficients(0.5, 0, 0, 0.02))
             .useSecondaryHeadingPIDF(false)
 
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.0015, 0, 0, 0.6, 0.02))
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.0016, 0, 0, 0.6, 0.02))
             .useSecondaryDrivePIDF(false);
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 6, 1);
 

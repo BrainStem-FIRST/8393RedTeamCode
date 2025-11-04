@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.robot;
 
-import android.sax.StartElementListener;
-
 import com.acmerobotics.dashboard.config.Config;
 import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.control.PIDFController;
@@ -16,14 +14,16 @@ import org.firstinspires.ftc.teamcode.utils.ColorSensorBall.BallColor;
 @Config
 public class Indexer {
     public static class Params {
-        public double indexerVelocityStaticThreshold = 1, prettyMuchStatic = 400, minShootError = 200;
         public double manualIndexPowerAmp = 0.1;
         public int greenPos = 0; // ranges 0-2 (0=green should be shot first, 2=green should be shot last)
         public double csResponseDelay = 0;
-        public double kPClockwise60 = 0.0002, kPCounter60 = 0.000245, kPClockwise120 = 0.00015, kPCounter120 = 0.00018, kPClockwise180 = 0.00016;
-        public double kI = 0, kD = 0, kF = 0.01, minPower = 0.085;
+        public double kPClockwise60 = 0.000225, kPCounter60 = 0.00024, kPClockwise120 = 0.000185, kPCounter120 = 0.000175, kPClockwise180 = 0.00016;
+        public double kPClockwise120Auto = 0.00022, kPCounter120Auto = 0.00026;
+        public double kI = 0, kD = 0, kF = 0.01, minPower = 0.085, autoMinPower = 0.095;
         public double thirdRotateAmount = 2733.333333; // encoders needed to rotate 120 degrees
-        public double oscillateAmount = 50;
+        public double oscillateAmount = 50, oscillatePower = 0.1;
+        public double shootStaticVelThreshold = 500, shootStaticEncoderThreshold = 200;
+        public double csStaticVelThreshold = 1000, csStaticEncoderThreshold = 200;
         public int errorThreshold = 75;
         public double lightFlashTime = 0.3; // time that light flashes for after each color sensor recognition
         public double timeSinceLastRotateThreshold = 1; // after each rotation, i will recheck all valid color sensors for this amount of time
@@ -34,14 +34,23 @@ public class Indexer {
     // indexer stuff
     private final CRServo indexer;
     private final DcMotorEx indexerEncoderTracker;
-    private double targetIndexerEncoder;
+    private int curEncoder;
+    private boolean encoderUpdated; // for caching
+    private double targetEncoder, oscillateTargetEncoder;
     private final PIDFController cwPid60, ccwPid60, cwPid120, ccwPid120, ccPid180;
+    private final PIDFController cwPid120Auto, ccwPid120Auto;
     private PIDFController indexerPid;
     private String pidSelected;
     private double indexPower, prevIndexPower;
 
+    // state stuff
+    public enum IndexerState {
+        TARGET, OSCILLATE
+    }
+    private IndexerState indexerState;
+    private boolean shouldOscillate;
 
-    // logic stuff
+    // misc logic stuff
     private final BallColor[] ballList;
     private int intakeI; // 0-5: represents 6 possible places where ball could be in the indexer; index 0 is index of central intake spot, indexes increase in clockwise order
     private int numBalls;
@@ -49,10 +58,10 @@ public class Indexer {
     private boolean shouldCheckLeftCS, shouldCheckRightCS, shouldCheckMidCS;
     private boolean ballAtLeft, ballAtRight, ballAtMid;
     private int curPatternI; // current pattern color selected
-    private boolean shouldAutoRotate;
-    private boolean autoRotateCued;
+    private boolean shouldAutoRotate, autoRotateCued;
     private final ElapsedTime indexerAutoRotateTimer, timeSinceLastRotate, lightTimer;
     private double intakeOffset;
+    private boolean inAutonomous;
 
     public Indexer(Robot robot) {
         this.robot = robot;
@@ -61,12 +70,14 @@ public class Indexer {
         indexPower = 0;
         indexerEncoderTracker = robot.hardwareMap.get(DcMotorEx.class, "FL");
         resetIndexerEncoder();
-        targetIndexerEncoder = 0;
+        targetEncoder = 0;
         cwPid60 = new PIDFController(new PIDFCoefficients(params.kPClockwise60, params.kI, params.kD, params.kF));
         ccwPid60 = new PIDFController(new PIDFCoefficients(params.kPCounter60, params.kI, params.kD, params.kF));
         cwPid120 = new PIDFController(new PIDFCoefficients(params.kPClockwise120, params.kI, params.kD, params.kF));
         ccwPid120 = new PIDFController(new PIDFCoefficients(params.kPCounter120, params.kI, params.kD, params.kF));
         ccPid180 = new PIDFController(new PIDFCoefficients(params.kPClockwise180, params.kI, params.kD, params.kF));
+        cwPid120Auto = new PIDFController(new PIDFCoefficients(params.kPClockwise120Auto, params.kI, params.kD, params.kF));
+        ccwPid120Auto = new PIDFController(new PIDFCoefficients(params.kPCounter120Auto, params.kI, params.kD, params.kF));
         indexerPid = new PIDFController(new PIDFCoefficients(params.kPClockwise60, params.kI, params.kD, params.kF));
 
         autoRotateCued = false;
@@ -89,6 +100,12 @@ public class Indexer {
         curPatternI = 0;
         shouldAutoRotate = true;
         pidSelected = "normal";
+
+        indexerState = IndexerState.TARGET;
+        shouldOscillate = true;
+    }
+    public void resetCaches() {
+        encoderUpdated = false;
     }
 
     public void update() {
@@ -101,7 +118,7 @@ public class Indexer {
         rightCS.update();
         midCS.update();
         // updating color sensor values
-        if (shouldAutoRotate && prettyMuchStatic()
+        if (shouldAutoRotate && prettyMuchStaticCS()
         && (robot.intake.getIntakeState() != Intake.IntakeState.OFF || timeSinceLastRotate.seconds() < params.timeSinceLastRotateThreshold)) {
 
             // potentially check middle sensor if indexer at correct offset
@@ -150,25 +167,56 @@ public class Indexer {
                 rotate(-1);
         }
 
-        // calculating indexer power
-        if(Math.abs(getIndexerError()) < params.errorThreshold)
-            indexPower = 0;
-        else {
-            if(robot.g2.rightTrigger() > 0.05)
-                indexPower = Math.signum(getIndexerError()) * robot.g2.rightTrigger() * params.manualIndexPowerAmp;
-            else {
-                indexerPid.updatePosition(getIndexerEncoderTracker());
-                indexPower = indexerPid.run();
-                indexPower = Math.max(Math.abs(indexPower), params.minPower) * Math.signum(indexPower) * -1;
+        // listen for oscillate state change
+        if(shouldOscillate && emptyAt(intakeI) && intakeI % 2 == intakeOffset) {
+            if (indexerState == IndexerState.TARGET) {
+                indexerState = IndexerState.OSCILLATE;
+                oscillateTargetEncoder = targetEncoder + params.oscillateAmount;
             }
         }
+        // listen for target state change
+        else if(indexerState == IndexerState.OSCILLATE)
+            indexerState = IndexerState.TARGET;
+
+
+        // calculating indexer power
+        if(indexerState == IndexerState.TARGET) {
+            if (Math.abs(getIndexerError()) < params.errorThreshold)
+                indexPower = 0;
+            else {
+                if (robot.g2.rightTrigger() > 0.05)
+                    indexPower = Math.signum(getIndexerError()) * robot.g2.rightTrigger() * params.manualIndexPowerAmp;
+                else {
+                    calcIndexerPidPower();
+                }
+            }
+        }
+        else if(indexerState == IndexerState.OSCILLATE) {
+            // updating oscillate goal position
+            double dir = Math.signum(oscillateTargetEncoder - targetEncoder);
+            if(dir != Math.signum(oscillateTargetEncoder - getIndexerEncoder())) {
+                dir *= -1;
+                oscillateTargetEncoder = targetEncoder + params.oscillateAmount * dir;
+            }
+
+            if(Math.abs(oscillateTargetEncoder - getIndexerEncoder()) > params.oscillateAmount * 2)
+                calcIndexerPidPower();
+            else
+                indexPower = params.oscillatePower * -dir;
+        }
+
         if(indexPower != prevIndexPower)
             indexer.setPower(indexPower);
         prevIndexPower = indexPower;
 
         //misc
         if(robot.g1.isFirstStart())
-            shouldAutoRotate = !shouldAutoRotate;
+            shouldOscillate = !shouldOscillate;
+    }
+    private void calcIndexerPidPower() {
+        indexerPid.updatePosition(getIndexerEncoder());
+        indexPower = indexerPid.run();
+        indexPower = Math.max(Math.abs(indexPower), inAutonomous ? params.autoMinPower : params.minPower) * Math.signum(indexPower) * -1;
     }
     private void updateIndexerAutoRotate() {
         if(!shouldAutoRotate || !autoRotateCued || indexerAutoRotateTimer.seconds() < params.csResponseDelay)
@@ -242,10 +290,18 @@ public class Indexer {
         }
         else if(sixth == 2) {
             pidSelected = "counter clockwise 120";
+            if(inAutonomous) {
+                pidSelected += " AUTO";
+                return ccwPid120Auto;
+            }
             return ccwPid120;
         }
         else if(sixth == -2) {
             pidSelected = "clockwise 120";
+            if(inAutonomous) {
+                pidSelected += " AUTO";
+                return cwPid120Auto;
+            }
             return cwPid120;
         }
         pidSelected = "clockwise 180";
@@ -254,9 +310,9 @@ public class Indexer {
     // positive value = counter clockwise rotation
     public void rotate(int sixth) {
         intakeI = (intakeI - sixth + 6) % 6;
-        targetIndexerEncoder += sixth * params.thirdRotateAmount/2;
+        targetEncoder += sixth * params.thirdRotateAmount/2;
         indexerPid = calcRotationPid(sixth);
-        indexerPid.setTargetPosition(targetIndexerEncoder);
+        indexerPid.setTargetPosition(targetEncoder);
 
         shouldCheckMidCS = emptyAt(intakeI);
         shouldCheckLeftCS = emptyAt(getLeftIntakeI());
@@ -270,8 +326,12 @@ public class Indexer {
         }
         curPatternI = (curPatternI + 1) % 3;
     }
-    public int getIndexerEncoderTracker() {
-        return indexerEncoderTracker.getCurrentPosition();
+    public int getIndexerEncoder() {
+        if(!encoderUpdated) {
+            encoderUpdated = true;
+            curEncoder = indexerEncoderTracker.getCurrentPosition();
+        }
+        return curEncoder;
     }
     public double getIndexerPower() {
         return indexer.getPower();
@@ -279,17 +339,11 @@ public class Indexer {
     public int getNumBalls() {
         return numBalls;
     }
-    public void incNumBalls() {
-        numBalls++;
-    }
-    public void decNumBalls() {
-        numBalls--;
-    }
-    public double getTargetIndexerEncoder() {
-        return targetIndexerEncoder;
+    public double getTargetEncoder() {
+        return targetEncoder;
     }
     public double getIndexerError() {
-        return targetIndexerEncoder - getIndexerEncoderTracker();
+        return targetEncoder - getIndexerEncoder();
     }
     public BallColor getLeftCSColor() {
         return leftCS.getBallColor();
@@ -300,8 +354,12 @@ public class Indexer {
     public BallColor getMidCSColor() {
         return midCS.getBallColor();
     }
-    public boolean prettyMuchStatic() {
-        return indexerEncoderTracker.getVelocity() < params.indexerVelocityStaticThreshold && Math.abs(getIndexerError()) < params.prettyMuchStatic;
+    public boolean prettyMuchStaticShoot() {
+        return indexerEncoderTracker.getVelocity() < params.shootStaticVelThreshold && Math.abs(getIndexerError()) < params.shootStaticEncoderThreshold;
+    }
+    public boolean prettyMuchStaticCS() {
+        return indexerEncoderTracker.getVelocity() < params.csStaticVelThreshold && Math.abs(getIndexerError()) < params.csStaticEncoderThreshold;
+
     }
     public double getIndexerVel() {
         return indexerEncoderTracker.getVelocity();
@@ -392,5 +450,20 @@ public class Indexer {
     }
     public double getLightTimerSeconds() {
         return lightTimer.seconds();
+    }
+    public boolean shouldOscillate() {
+        return shouldOscillate;
+    }
+    public void setShouldOscillate(boolean shouldOscillate) {
+        this.shouldOscillate = shouldOscillate;
+    }
+    public double getOscillateTargetEncoder() {
+        return oscillateTargetEncoder;
+    }
+    public IndexerState getIndexerState() {
+        return indexerState;
+    }
+    public void setInAutonomous() {
+        inAutonomous = true;
     }
 }

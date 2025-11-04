@@ -41,8 +41,8 @@ public class Transfer {
         switch(transferState) {
             case OFF:
                 if((robot.g1.rightBumper() || shouldShootAll)
-                && robot.indexer.prettyMuchStatic() && robot.indexer.getIndexerError() < Indexer.params.minShootError
-                && (!shouldShootSafely || robot.shooter.getShooterVelocity() > robot.shooter.getMinShooterVel()))
+                && robot.indexer.prettyMuchStaticShoot()
+                && (!shouldShootSafely || (robot.shooter.getShooterVelocity() > robot.shooter.getMinShooterVel() && robot.shooter.getShooterVelocity() < robot.shooter.getMaxShooterVel())))
                     setTransferTransferring();
                 break;
             case TRANSFERRING:

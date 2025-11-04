@@ -8,7 +8,6 @@ import com.pedropathing.control.PIDFController;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
-import com.pedropathing.math.Vector;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -40,8 +39,6 @@ public class Robot {
     public final Shooter shooter;
     public final Parker parker;
     public final Light light;
-
-    private boolean automatedDrive;
     private Supplier<PathChain> farPathChain, nearPathChain;
 
     private final AprilTagProcessor tagProcessor;
@@ -57,10 +54,13 @@ public class Robot {
         public double intakeToWheelCenter = wheelToWheelL / 2 + intakeToFrontWheelL;
         public double backToWheelCenter = wheelToWheelL / 2 + backToBackWheelL;
         public double tickW = 0.8;
-        public double kP = 0.004, kD = 0, kF = 0;
-        public double minShooterTurn = 0.08, headingShootError = 2;
+        public double kPFar = 0.3, kDFar = 0.0001, kF = 0;
+        public double kPClose = 0.5, kDClose = 0;
+        public double pidSwitch = 5;
+        public double minShooterTurn = 0.02, headingShootError = 2;
+        public boolean autoDone = false;
     }
-    private PIDFController autoTurnPid;
+    private PIDFController autoTurnPidFar, autoTurnPidClose;
     private boolean slowTurn;
     public static Params params = new Params();
     // used for auto
@@ -139,11 +139,22 @@ public class Robot {
                 .setLinearHeadingInterpolation(follower.getHeading(), Math.toRadians(params.nearHeading))
                 .build();
 
-        autoTurnPid = new PIDFController(new PIDFCoefficients(params.kP, 0, params.kD, params.kF));
+        autoTurnPidFar = new PIDFController(new PIDFCoefficients(params.kPFar, 0, params.kDFar, params.kF));
+        autoTurnPidClose = new PIDFController(new PIDFCoefficients(params.kPClose, 0, params.kDClose, params.kF));
         follower.setStartingPose(startPose);
+    }
+    public void updateSubsystems() {
+        indexer.resetCaches();
+        shooter.resetCaches();
+        intake.update();
+        indexer.update();
+        transfer.update();
+        shooter.update();
+        light.update();
     }
     public void updateTele() {
         updatePedroTele();
+        updateSubsystems();
         updateAprilTag();
     }
     public void updateAprilTag() {
@@ -164,8 +175,6 @@ public class Robot {
         }
         // 21: gpp, 22: pgp, 23: ppg
     }
-    private void findPattern(ArrayList<AprilTagDetection> detections) {
-    }
     public void initPedroTele() {
         follower.startTeleopDrive();
         follower.update();
@@ -177,25 +186,22 @@ public class Robot {
 
         double turnPower = Range.clip(-g1.rightStickX() * params.turnAmpNormal + g1.leftStickX() * params.turnCorrection, -1, 1);
         if(slowTurn) {
-//            Vector goalVec = new Vector();
-//            goalVec.setOrthogonalComponents(params.goalX - follower.getPose().getX(), params.goalY - follower.getPose().getY());
-//            Vector perpGoal = new Vector();
-//            perpGoal.setOrthogonalComponents(-goalVec.getYComponent(), goalVec.getXComponent());
-//            Vector shooterVec = new Vector();
-//            shooterVec.setOrthogonalComponents(-Math.cos(follower.getHeading()), -Math.sin(follower.getHeading()));
-//            double dot = shooterVec.getXComponent() * perpGoal.getXComponent() + shooterVec.getYComponent() * perpGoal.getYComponent();
-//            autoTurnPid.updateError(-dot);
-            if(Math.abs(goalHeading - follower.getHeading()) < params.headingShootError * Math.PI / 180)
-                slowTurn = false;
+            double error = goalHeading - follower.getHeading();
+            if(Math.abs(error) < params.headingShootError * Math.PI / 180) {
+//                slowTurn = false;
+            }
             else {
-                autoTurnPid.updateError(goalHeading - follower.getHeading());
-                turnPower = autoTurnPid.run();
+                if(Math.abs(error) > params.pidSwitch) {
+                    telemetry.addLine("pid FAR");
+                    autoTurnPidFar.updateError(error);
+                    turnPower = autoTurnPidFar.run();
+                }
+                else {
+                    telemetry.addLine("pid CLOSE");
+                    autoTurnPidClose.updateError(error);
+                    turnPower = autoTurnPidClose.run();
+                }
                 turnPower = Math.max(params.minShooterTurn, Math.abs(turnPower)) * Math.signum(turnPower);
-//            telemetry.addData("goalVec", goalVec);
-//            telemetry.addData("shooter vec", shooterVec);
-//            telemetry.addData("dot", dot);
-//            telemetry.addData("goal angle", Math.atan2(goalVec.getYComponent(), goalVec.getXComponent()));
-//            telemetry.addData("shooter angle", Math.atan2(shooterVec.getYComponent(), shooterVec.getXComponent()));
             }
         }
         telemetry.addData("dx", params.goalX - follower.getPose().getX());
@@ -217,7 +223,7 @@ public class Robot {
         }
         return result;
     }
-    public boolean automatedDrive() {
-        return automatedDrive;
+    public boolean isSlowTurn() {
+        return slowTurn;
     }
 }

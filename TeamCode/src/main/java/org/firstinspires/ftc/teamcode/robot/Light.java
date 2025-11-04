@@ -17,7 +17,7 @@ public class Light {
         public double off = inverseLerp(minPwm, maxPwm, 600);
         public double bright = inverseLerp(minPwm, maxPwm, 1700);
         public double dim = inverseLerp(minPwm, maxPwm, 750);
-        public double flashTime = 0.8;
+        public double flashTime = 1.4;
     }
     public static Params params = new Params();
     public final Robot robot;
@@ -25,7 +25,8 @@ public class Light {
     private double lightValue;
     public enum LightState {
         SET,
-        FLASH
+        FLASH_BRIGHT,
+        FLASH_DIM
     }
     private LightState lightState;
     private ElapsedTime flashTimer;
@@ -38,9 +39,20 @@ public class Light {
         flashTimer = new ElapsedTime();
     }
     public void update() {
-        if(robot.shooter.getShooterVelocity() < robot.shooter.getMinShooterVel() && lightState != LightState.FLASH) {
-            lightState = LightState.FLASH;
-            flashTimer.reset();
+        if(Robot.params.autoDone) {
+            if(lightState != LightState.FLASH_BRIGHT)
+                flashTimer.reset();
+            lightState = LightState.FLASH_BRIGHT;
+        }
+        if(robot.shooter.getShooterVelocity() < robot.shooter.getMinShooterVel() && robot.shooter.getShouldShoot()) {
+            if(lightState != LightState.FLASH_BRIGHT)
+                flashTimer.reset();
+            lightState = LightState.FLASH_BRIGHT;
+        }
+        else if(robot.isSlowTurn()) {
+            if(lightState != LightState.FLASH_DIM)
+                flashTimer.reset();
+            lightState = LightState.FLASH_DIM;
         }
         else if(robot.indexer.getLightTimerSeconds() < Indexer.params.lightFlashTime) {
             lightState = LightState.SET;
@@ -53,11 +65,17 @@ public class Light {
         updateLight();
     }
     private void updateLight() {
-        if (lightState == LightState.FLASH) {
+
+        if (lightState == LightState.FLASH_BRIGHT || lightState == LightState.FLASH_DIM) {
+            double flashValue = params.bright;
+            if(lightState == LightState.FLASH_DIM)
+                flashValue = params.dim;
+
+
             if (flashTimer.seconds() > params.flashTime)
                 lightValue = params.off;
             else
-                lightValue = params.bright;
+                lightValue = flashValue;
             if (flashTimer.seconds() > params.flashTime * 2)
                 flashTimer.reset();
         }

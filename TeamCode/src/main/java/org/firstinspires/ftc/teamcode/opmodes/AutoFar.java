@@ -69,7 +69,9 @@ public class AutoFar extends LinearOpMode {
         waitForStart();
 
         while(opModeIsActive()) {
-            updateAuto();
+            robot.updateAprilTag();
+            robot.updateSubsystems();
+            updatePedroAuto();
             telemetry.addData("pose", robot.follower.getPose());
             telemetry.addData("path i", pathNum);
             telemetry.addData("timer", pathTimer.seconds());
@@ -87,16 +89,6 @@ public class AutoFar extends LinearOpMode {
             telemetry.addData("transfer state", robot.transfer.getTransferState());
             telemetry.update();
         }
-    }
-
-    private void updateAuto() {
-        robot.updateAprilTag();
-        robot.intake.update();
-        robot.indexer.update();
-        robot.transfer.update();
-        robot.shooter.update();
-        updatePedroAuto();
-
     }
     private void updatePedroAuto() {
         switch(pathNum) {
