@@ -46,12 +46,12 @@ public class Constants {
             .translationalPIDFCoefficients(new PIDFCoefficients(0.1, 0, 0, 0.01))
             .useSecondaryTranslationalPIDF(false)
 
-            .headingPIDFCoefficients(new PIDFCoefficients(0.5, 0, 0, 0.02))
+            .headingPIDFCoefficients(new PIDFCoefficients(0.6, 0, 0, 0.02))
             .useSecondaryHeadingPIDF(false)
 
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.0016, 0, 0, 0.6, 0.02))
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.0018, 0, 0, 0.6, 0.02))
             .useSecondaryDrivePIDF(false);
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 6, 1);
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 8, 1);
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         pathConstraints.setHeadingConstraint(5 * Math.PI / 180);

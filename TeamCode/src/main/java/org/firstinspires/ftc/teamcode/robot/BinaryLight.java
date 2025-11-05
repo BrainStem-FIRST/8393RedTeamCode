@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.ServoImplEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 @Config
-public class Light {
+public class BinaryLight {
     private static double inverseLerp(double a, double b, double x) {
         return (x - a) / (b - a);
     }
@@ -29,8 +29,8 @@ public class Light {
         FLASH_DIM
     }
     private LightState lightState;
-    private ElapsedTime flashTimer;
-    public Light(Robot robot) {
+    private final ElapsedTime flashTimer;
+    public BinaryLight(Robot robot) {
         this.robot = robot;
         light = robot.hardwareMap.get(ServoImplEx.class, "light");
         light.setPwmRange(new PwmControl.PwmRange(params.minPwm, params.maxPwm));
@@ -39,24 +39,14 @@ public class Light {
         flashTimer = new ElapsedTime();
     }
     public void update() {
-        if(Robot.params.autoDone) {
-            if(lightState != LightState.FLASH_BRIGHT)
-                flashTimer.reset();
-            lightState = LightState.FLASH_BRIGHT;
-        }
         if(robot.shooter.getShooterVelocity() < robot.shooter.getMinShooterVel() && robot.shooter.getShouldShoot()) {
             if(lightState != LightState.FLASH_BRIGHT)
                 flashTimer.reset();
             lightState = LightState.FLASH_BRIGHT;
         }
-        else if(robot.isSlowTurn()) {
-            if(lightState != LightState.FLASH_DIM)
-                flashTimer.reset();
-            lightState = LightState.FLASH_DIM;
-        }
         else if(robot.indexer.getLightTimerSeconds() < Indexer.params.lightFlashTime) {
             lightState = LightState.SET;
-            lightValue = params.dim;
+            lightValue = params.bright;
         }
         else {
             lightValue = params.off;

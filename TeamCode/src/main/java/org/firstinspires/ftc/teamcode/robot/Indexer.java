@@ -17,8 +17,8 @@ public class Indexer {
         public double manualIndexPowerAmp = 0.1;
         public int greenPos = 0; // ranges 0-2 (0=green should be shot first, 2=green should be shot last)
         public double csResponseDelay = 0;
-        public double kPClockwise60 = 0.000225, kPCounter60 = 0.00024, kPClockwise120 = 0.000185, kPCounter120 = 0.000175, kPClockwise180 = 0.00016;
-        public double kPClockwise120Auto = 0.00022, kPCounter120Auto = 0.00026;
+        public double kPClockwise60 = 0.00055, kPCounter60 = 0.0006, kPClockwise120 = 0.00065, kPCounter120 = 0.0007, kPClockwise180 = 0.0005;
+        public double kPClockwise120Auto = 0.00065, kPCounter120Auto = 0.0007;
         public double kI = 0, kD = 0, kF = 0.01, minPower = 0.085, autoMinPower = 0.095;
         public double thirdRotateAmount = 2733.333333; // encoders needed to rotate 120 degrees
         public double oscillateAmount = 50, oscillatePower = 0.1;
@@ -60,6 +60,7 @@ public class Indexer {
     private int curPatternI; // current pattern color selected
     private boolean shouldAutoRotate, autoRotateCued;
     private final ElapsedTime indexerAutoRotateTimer, timeSinceLastRotate, lightTimer;
+    private BallColor lastIntakedColor;
     private double intakeOffset;
     private boolean inAutonomous;
 
@@ -101,6 +102,7 @@ public class Indexer {
         shouldAutoRotate = true;
         pidSelected = "normal";
 
+        lastIntakedColor = BallColor.N;
         indexerState = IndexerState.TARGET;
         shouldOscillate = true;
     }
@@ -131,6 +133,7 @@ public class Indexer {
                     numBalls++;
                     indexerAutoRotateTimer.reset();
                     autoRotateCued = true;
+                    lastIntakedColor = midCS.getBallColor();
                 }
             }
             // potentially check left and right sensors if indexer is at correct offset
@@ -140,12 +143,14 @@ public class Indexer {
                     ballList[getLeftIntakeI()] = leftCS.getBallColor();
                     numBalls++;
                     this.ballAtLeft = true;
+                    lastIntakedColor = leftCS.getBallColor();
                 }
                 boolean ballAtRight = shouldCheckRightCS && emptyAt(getRightIntakeI()) && rightCS.getBallColor() != BallColor.N;
                 if (ballAtRight) {
                     ballList[getRightIntakeI()] = rightCS.getBallColor();
                     numBalls++;
                     this.ballAtRight = true;
+                    lastIntakedColor = rightCS.getBallColor();
                 }
                 if (ballAtLeft || ballAtRight) {
                     indexerAutoRotateTimer.reset();
@@ -465,5 +470,8 @@ public class Indexer {
     }
     public void setInAutonomous() {
         inAutonomous = true;
+    }
+    public BallColor getLastIntakedColor() {
+        return lastIntakedColor;
     }
 }

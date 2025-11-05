@@ -82,7 +82,8 @@ public class MainTestTele extends LinearOpMode {
             telemetry.addLine();
 
             telemetry.addLine("LIGHT----");
-            telemetry.addData("value", robot.light.getLightValue());
+            telemetry.addData("binary value", robot.binaryLight.getLightValue());
+            telemetry.addData("rgb value", robot.rgbLight.getLightValue());
 
             telemetry.addLine("PEDRO----");
             telemetry.addData("  x", robot.follower.getPose().getX());
