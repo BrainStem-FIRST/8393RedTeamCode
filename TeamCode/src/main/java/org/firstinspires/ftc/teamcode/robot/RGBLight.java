@@ -51,15 +51,11 @@ public class RGBLight {
             }
         }
         else if((robot.shooter.getShooterVelocity() < robot.shooter.getMinShooterVel() || robot.shooter.getShooterVelocity() > robot.shooter.getMaxShooterVel()) && robot.shooter.getShouldShoot()) {
-            if(lightState != LightState.FLASH)
-                flashTimer.reset();
-            lightState = LightState.FLASH;
+            lightState = LightState.SET;
             lightValue = params.red;
         }
         else if(robot.isSlowTurn()) {
-            if(lightState != LightState.FLASH)
-                flashTimer.reset();
-            lightState = LightState.FLASH;
+            lightState = LightState.SET;
             lightValue = params.yellow;
         }
         else if(robot.indexer.getLightTimerSeconds() < Indexer.params.lightFlashTime) {

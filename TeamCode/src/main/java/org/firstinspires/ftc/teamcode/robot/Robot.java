@@ -45,7 +45,7 @@ public class Robot {
     private final AprilTagProcessor tagProcessor;
     private final VisionPortal visionPortal;
     public static class Params {
-        public double goalX = 3, goalY = 138;
+        public double goalXNear = 3, goalYNear = 138, goalXFar = 5, goalYFar = 138;
         public double farX = 86.3, farY = 16, farHeading = -65;
         public double nearX = 52.7, nearY = 89.6, nearHeading = -45;
         public double turnCorrection = 0.14, turnAmpNormal = 0.8, turnAmpSlow = 0.2;
@@ -55,10 +55,11 @@ public class Robot {
         public double intakeToWheelCenter = wheelToWheelL / 2 + intakeToFrontWheelL;
         public double backToWheelCenter = wheelToWheelL / 2 + backToBackWheelL;
         public double tickW = 0.8;
-        public double kPFar = 0.5, kDFar = 0.0001, kF = 0;
+        public double kPFar = 0.3, kDFar = 0.0001, kF = 0;
         public double kPClose = 0.6, kDClose = 0;
         public double pidSwitch = 5;
-        public double minShooterTurnFar = 0.12, minShooterTurnClose = 0.1, headingShootErrorNear = 3, headingShootErrorFar = 1.5;
+        public double minShooterTurnFar = 0.12, minShooterTurnClose = 0.1, maxShooterTurn = 0.5;
+        public double headingShootErrorNear = 1.5, headingShootErrorFar = 1.5;
         public boolean autoDone = false;
     }
     private PIDFController autoTurnPidFar, autoTurnPidClose;
@@ -184,7 +185,8 @@ public class Robot {
         follower.update();
     }
     public void updatePedroTele() {
-        double goalHeading = Math.atan2(follower.getPose().getY() - params.goalY, follower.getPose().getX() - params.goalX);
+        double goalHeading = shooter.getZone() == 0 ? Math.atan2(follower.getPose().getY() - params.goalYNear, follower.getPose().getX() - params.goalXNear)
+                : Math.atan2(follower.getPose().getY() - params.goalYFar, follower.getPose().getX() - params.goalXFar);
         if(g1.isFirstLeftBumper())
             slowTurn = !slowTurn;
 
@@ -199,18 +201,19 @@ public class Robot {
                     telemetry.addLine("pid FAR");
                     autoTurnPidFar.updateError(error);
                     turnPower = autoTurnPidFar.run();
-                    turnPower = Math.max(params.minShooterTurnFar, Math.abs(turnPower)) * Math.signum(turnPower);
+                    turnPower = Math.max(params.minShooterTurnFar, Math.abs(turnPower)) * Math.signum(turnPower) - g1.rightStickX() * params.turnAmpSlow;
                 }
                 else {
                     telemetry.addLine("pid CLOSE");
                     autoTurnPidClose.updateError(error);
                     turnPower = autoTurnPidClose.run();
-                    turnPower = Math.max(params.minShooterTurnClose, Math.abs(turnPower)) * Math.signum(turnPower);
+                    turnPower = Math.max(params.minShooterTurnClose, Math.abs(turnPower)) * Math.signum(turnPower) - g1.rightStickX() * params.turnAmpSlow;
                 }
+                turnPower = Math.min(Math.abs(turnPower), params.maxShooterTurn) * Math.signum(turnPower);
             }
         }
-        telemetry.addData("dx", params.goalX - follower.getPose().getX());
-        telemetry.addData("dy", params.goalY - follower.getPose().getY());
+//        telemetry.addData("dx", params.goalX - follower.getPose().getX());
+//        telemetry.addData("dy", params.goalY - follower.getPose().getY());
         telemetry.addData("goalHeading", Math.floor(goalHeading * 180 / Math.PI));
         telemetry.addData("robot heading", Math.floor(follower.getHeading() * 180 / Math.PI));
         telemetry.addData("turn power", turnPower);

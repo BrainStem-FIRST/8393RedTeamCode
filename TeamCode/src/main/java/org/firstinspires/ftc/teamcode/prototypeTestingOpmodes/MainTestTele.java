@@ -68,7 +68,6 @@ public class MainTestTele extends LinearOpMode {
             telemetry.addData("  target and current power", robot.shooter.getTargetMotorPower() + ", " + robot.shooter.getShooterPower());
             telemetry.addData("  target and current veloc", robot.shooter.getTargetMotorVel() + ", " + robot.shooter.getShooterVelocity());
             telemetry.addData("  hood position", robot.shooter.getHoodPos());
-            telemetry.addData("  robot dist", robot.shooter.distance());
             telemetry.addData("  zone", robot.shooter.getZone());
 
             telemetry.addLine();

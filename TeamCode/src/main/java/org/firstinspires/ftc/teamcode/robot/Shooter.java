@@ -169,9 +169,6 @@ public class Shooter {
         motor1.setPower(power);
         motor2.setPower(-power);
     }
-    public double distance(){
-        return Math.sqrt(Math.pow(robot.follower.getPose().getX()-Robot.params.goalX, 2) + Math.pow(robot.follower.getPose().getY()-Robot.params.goalY, 2));
-    }
     public double getShooterVelocity() {
         if(!velUpdated) {
             velUpdated = true;

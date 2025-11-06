@@ -13,7 +13,7 @@ public class Intake {
     // OFF: motor not moving
     // COLLECTING: motor running to intake
     public enum IntakeState {
-        OFF, COLLECTING, POST_COLLECTING
+        OFF, INTAKING, EXTAKING, POST_COLLECTING
     }
 
     private IntakeState intakeState;
@@ -38,18 +38,22 @@ public class Intake {
             case OFF:
                 if(intakeSafely && !robot.indexer.prettyMuchStaticCS())
                     return;
-
-                if(listenCollectInput() || shouldIntake)
-                    setStateCollecting(collectPower);
-                else if(listenExtakeInput())
-                    setStateCollecting(-collectPower);
+                if(robot.g1.rightTrigger() > 0.1 || shouldIntake)
+                    setStateIntaking();
+                else if(robot.g1.leftTrigger() > 0.1)
+                    setStateExtaking();
                 break;
-            case COLLECTING:
+            case INTAKING:
                 if(intakeSafely && !robot.indexer.prettyMuchStaticCS()) // auto checking for indexer movement
                     setStateOff();
-                else if(!listenCollectInput() && !listenExtakeInput() && !shouldIntake)
+                else if(robot.g1.rightTrigger() < 0.1 && !shouldIntake)
                     setStatePostCollecting();
                 break;
+            case EXTAKING:
+                if(robot.g1.rightTrigger() < 0.1)
+                    setStateOff();
+                break;
+
         }
         if(motorPower != prevMotorPower)
             intake.setPower(motorPower);
@@ -64,9 +68,13 @@ public class Intake {
         intakeState = IntakeState.OFF;
         motorPower = 0;
     }
-    private void setStateCollecting(double power) {
-        intakeState = IntakeState.COLLECTING;
-        motorPower = power;
+    private void setStateIntaking() {
+        intakeState = IntakeState.INTAKING;
+        motorPower = collectPower;
+    }
+    private void setStateExtaking() {
+        intakeState = IntakeState.EXTAKING;
+        motorPower = -collectPower;
     }
     public IntakeState getIntakeState() {
         return intakeState;
@@ -74,10 +82,6 @@ public class Intake {
     public double getIntakePower() {
         return motorPower;
     }
-    private boolean listenCollectInput() {
-        return robot.g1.rightTrigger() > 0.1;
-    }
-    private boolean listenExtakeInput() { return robot.g1.leftTrigger() > 0.1; }
     public void setIntake(boolean shouldIntake) {
         this.shouldIntake = shouldIntake;
     }

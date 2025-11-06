@@ -111,18 +111,16 @@ public class Indexer {
     }
 
     public void update() {
-        updateColorSensors();
-        updateIndexer();
+        updateIndexer(updateColorSensors());
         updateIndexerAutoRotate();
     }
-    private void updateColorSensors() {
+    private boolean updateColorSensors() {
         leftCS.update();
         rightCS.update();
         midCS.update();
         // updating color sensor values
-        if (shouldAutoRotate && prettyMuchStaticCS()
-        && (robot.intake.getIntakeState() != Intake.IntakeState.OFF || timeSinceLastRotate.seconds() < params.timeSinceLastRotateThreshold)) {
-
+        boolean oscillateValid = robot.intake.getIntakeState() != Intake.IntakeState.OFF || timeSinceLastRotate.seconds() < params.timeSinceLastRotateThreshold;
+        if (shouldAutoRotate && prettyMuchStaticCS() && oscillateValid) {
             // potentially check middle sensor if indexer at correct offset
             if(intakeI % 2 == intakeOffset) {
                 if (shouldCheckMidCS && emptyAt(intakeI) && midCS.getBallColor() != BallColor.N) {
@@ -162,8 +160,9 @@ public class Indexer {
             if(autoRotateCued)
                 lightTimer.reset();
         }
+        return oscillateValid;
     }
-    private void updateIndexer() {
+    private void updateIndexer(boolean oscillateValid) {
         // listening for gamepad input to index
         if (robot.transfer.getTransferState() == Transfer.TransferState.OFF) {
             if (robot.g1.isFirstB())
@@ -173,7 +172,7 @@ public class Indexer {
         }
 
         // listen for oscillate state change
-        if(shouldOscillate && emptyAt(intakeI) && intakeI % 2 == intakeOffset) {
+        if(shouldOscillate && oscillateValid && emptyAt(intakeI) && intakeI % 2 == intakeOffset) {
             if (indexerState == IndexerState.TARGET) {
                 indexerState = IndexerState.OSCILLATE;
                 oscillateTargetEncoder = targetEncoder + params.oscillateAmount;
