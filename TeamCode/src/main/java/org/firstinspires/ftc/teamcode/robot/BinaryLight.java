@@ -39,14 +39,10 @@ public class BinaryLight {
         flashTimer = new ElapsedTime();
     }
     public void update() {
-        if(robot.shooter.getShooterVelocity() < robot.shooter.getMinShooterVel() && robot.shooter.getShouldShoot()) {
+        if(robot.shooter.getShooterVelocity() < robot.shooter.getMinShooterVel() && !robot.shooter.isResting()) {
             if(lightState != LightState.FLASH_BRIGHT)
                 flashTimer.reset();
             lightState = LightState.FLASH_BRIGHT;
-        }
-        else if(robot.indexer.getLightTimerSeconds() < Indexer.params.lightFlashTime) {
-            lightState = LightState.SET;
-            lightValue = params.bright;
         }
         else {
             lightValue = params.off;

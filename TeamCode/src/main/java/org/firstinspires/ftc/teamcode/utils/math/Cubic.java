@@ -1,6 +1,6 @@
-package org.firstinspires.ftc.teamcode.utils;
+package org.firstinspires.ftc.teamcode.utils.math;
 
-public class Cubic {
+public class Cubic extends Func {
     public final double a, b, c, d;
     public Cubic(double a, double b, double c, double d) {
         this.a = a;
@@ -8,7 +8,8 @@ public class Cubic {
         this.c = c;
         this.d = d;
     }
-    public double f(double x) {
+    @Override
+    public double eval(double x) {
         return a * x * x * x + b * x * x + c * x + d;
     }
 }

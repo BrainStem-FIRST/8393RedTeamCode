@@ -44,6 +44,7 @@ public class AutoFar extends LinearOpMode {
         robot = new Robot(hardwareMap, telemetry, startPose);
         robot.intake.setIntakeSafely(true); // want intake to auto stop when indexing to prevent jams
         robot.indexer.setAutoRotate(true);
+        robot.shooter.setResting(false);
         robot.indexer.setAutoBallList(1, BallColor.G, BallColor.P, BallColor.P);
         robot.shooter.setZone(2);
         pathNum = 0;

@@ -60,6 +60,8 @@ public class Transfer {
             case RESETTING:
                 if(transferTimer.seconds() > params.transferResetTime) {
                     setTransferOff();
+                    if(robot.indexer.getNumBalls() == 0)
+                        robot.shooter.setResting(true);
                 }
         }
     }

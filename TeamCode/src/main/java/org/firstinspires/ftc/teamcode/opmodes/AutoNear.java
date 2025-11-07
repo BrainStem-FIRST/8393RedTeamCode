@@ -23,15 +23,16 @@ public class AutoNear extends LinearOpMode {
     public static class Params {
         public double startX = 63, startY = 137, startA = -90;
         public double endX = 46, endY = 72, endA = -45;
-        public double shootX = 57, shootY = 82, shootA = -48;
+        public double initShootY = 88;
+        public double shootX = 60, shootY = 78, shootA = -48;
         public double collectX = 25, collectA = -175;
 
-        public double preCollectX1 = 42, collect1Y = 92;
+        public double preCollectX1 = 44, collect1Y = 93.;
 
-        public double preCollectX2 = 47, collect2Y = 67;
+        public double preCollectX2 = 47, collect2Y = 69;
         public double preCollect2TX = 54, preCollect2TY = 64;
 
-        public double preCollectX3 = 46, collectY3 = 43;
+        public double preCollectX3 = 46, collectY3 = 45;
         public double preCollect3TX = 53, preCollect3TY = 39;
 
         public double leverX = 25, leverY = 80, leverA = -180;
@@ -46,7 +47,7 @@ public class AutoNear extends LinearOpMode {
     }
     public static Params params = new Params();
     private Robot robot;
-    private Pose startPose, shootPose, preCollect1Pose, collect1Pose, leverPose, shoot2TPose, preCollect2Pose, preCollect2TPose, collect2Pose, preCollect3Pose, preCollect3TPose, collect3Pose, endPose;
+    private Pose startPose, initShootPose, shootPose, preCollect1Pose, collect1Pose, leverPose, shoot2TPose, preCollect2Pose, preCollect2TPose, collect2Pose, preCollect3Pose, preCollect3TPose, collect3Pose, endPose;
     private PathChain shootAndCameraPath, preCollect1Path, leverPath, shoot2Path, preCollect2Path, shoot3Path, preCollect3Path, shoot4Path, endPath;
 
     private int pathNum;
@@ -64,6 +65,7 @@ public class AutoNear extends LinearOpMode {
         translationalPid.setTargetPosition(0);
 
         startPose = new Pose(params.startX, params.startY, Math.toRadians(params.startA));
+        initShootPose = new Pose(params.shootX, params.initShootY, Math.toRadians(params.shootA));
         shootPose = new Pose(params.shootX, params.shootY, Math.toRadians(params.shootA));
         preCollect1Pose = new Pose(params.preCollectX1, params.collect1Y, Math.toRadians(params.collectA));
         collect1Pose = new Pose(params.collectX, params.collect1Y, Math.toRadians(params.collectA));
@@ -84,12 +86,13 @@ public class AutoNear extends LinearOpMode {
         robot.indexer.setAutoBallList(1, ColorSensorBall.BallColor.P, ColorSensorBall.BallColor.P, ColorSensorBall.BallColor.G);
         robot.indexer.setAutoRotate(true);
         robot.shooter.setZone(0);
+        robot.shooter.setResting(false);
         robot.intake.setIntakeSafely(false);
         robot.transfer.setShootSafely(true);
 
         shootAndCameraPath = robot.follower.pathBuilder()
-                .addPath(new BezierLine(startPose, shootPose))
-                .setLinearHeadingInterpolation(startPose.getHeading(), shootPose.getHeading())
+                .addPath(new BezierLine(startPose, initShootPose))
+                .setLinearHeadingInterpolation(startPose.getHeading(), initShootPose.getHeading())
                 .build();
 
         preCollect1Path = robot.follower.pathBuilder()
@@ -151,15 +154,16 @@ public class AutoNear extends LinearOpMode {
             telemetry.addData("path i & timer", pathNum + ", " + pathTimer.seconds());
 //            telemetry.addData("green pos", Robot.params.greenPos);
             telemetry.addData("follower busy", robot.follower.isBusy());
+            telemetry.addData("shooter vel", Math.floor(robot.shooter.getShooterVelocity() * 100)/100);
+            telemetry.addData("min shooter vel", robot.shooter.getMinShooterVel());
+            telemetry.addData("target shooter vel", robot.shooter.getTargetMotorVel());
+            telemetry.addData("indexer ready to shoot", robot.indexer.prettyMuchStaticShoot());
             telemetry.addData("num balls", robot.indexer.getNumBalls());
 //            telemetry.addData("rotatedYet", rotatedYet);
             telemetry.addData("indexer state", robot.indexer.getIndexerState());
-            telemetry.addData("should shoot", robot.transfer.shouldShootAll());
             telemetry.addData("intake i", robot.indexer.getIntakeI());
             telemetry.addData("ballList", robot.indexer.getLabeledBalls());
             telemetry.addData("shooter power", robot.shooter.getShooterPower());
-            telemetry.addData("shooter vel", Math.floor(robot.shooter.getShooterVelocity() * 100)/100);
-            telemetry.addData("min shooter vel", robot.shooter.getMinShooterVel());
             telemetry.addData("intake state", robot.intake.getIntakeState());
             telemetry.addData("transfer state", robot.transfer.getTransferState());
             telemetry.update();
@@ -175,7 +179,7 @@ public class AutoNear extends LinearOpMode {
                 if(Robot.params.greenPos != -1 && !rotatedYet) {
                     rotatedYet = true;
                     robot.indexer.rotate(robot.indexer.getAlignIndexerOffset());
-                    robot.rgbLight.setState(RGBLight.LightState.FLASH, RGBLight.params.blue, params.aprilTagLightTime);
+                    robot.rgbLight.setState(RGBLight.LightState.SET, RGBLight.params.yellow, params.aprilTagLightTime);
                 }
                 if(robot.follower.isBusy())
                     pathTimer.reset();
@@ -205,6 +209,7 @@ public class AutoNear extends LinearOpMode {
                     updatePath(shoot2Path, 2);
                     robot.intake.setIntake(false);
                     robot.indexer.rotate(robot.indexer.getAlignIndexerOffset());
+                    robot.shooter.setResting(false);
                 }
                 break;
             case 4:
@@ -234,6 +239,7 @@ public class AutoNear extends LinearOpMode {
                     updatePath(shoot3Path);
                     robot.intake.setIntake(false);
                     robot.indexer.rotate(robot.indexer.getAlignIndexerOffset());
+                    robot.shooter.setResting(false);
                 }
 
                 break;
@@ -255,14 +261,18 @@ public class AutoNear extends LinearOpMode {
                     updatePath(shoot4Path);
                     robot.intake.setIntake(false);
                     robot.indexer.rotate(robot.indexer.getAlignIndexerOffset());
+                    robot.shooter.setResting(false);
                 }
                 break;
             case 11:
                 if(!robot.follower.isBusy()) {
                     if (robot.indexer.getNumBalls() > 0)
                         robot.transfer.setShootAll(true);
-                    else
+                    else {
                         updatePath(endPath);
+                        robot.transfer.setShootAll(false);
+                        robot.shooter.setResting(true);
+                    }
                 }
                 break;
             case 12:

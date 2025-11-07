@@ -59,7 +59,7 @@ public class Indexer {
     private boolean ballAtLeft, ballAtRight, ballAtMid;
     private int curPatternI; // current pattern color selected
     private boolean shouldAutoRotate, autoRotateCued;
-    private final ElapsedTime indexerAutoRotateTimer, timeSinceLastRotate, lightTimer;
+    private final ElapsedTime indexerAutoRotateTimer, timeSinceLastRotate;
     private BallColor lastIntakedColor;
     private double intakeOffset;
     private boolean inAutonomous;
@@ -84,7 +84,6 @@ public class Indexer {
         autoRotateCued = false;
         indexerAutoRotateTimer = new ElapsedTime();
         timeSinceLastRotate = new ElapsedTime();
-        lightTimer = new ElapsedTime();
 
         ballList = new BallColor[] {BallColor.N, BallColor.N, BallColor.N, BallColor.N, BallColor.N, BallColor.N};
         intakeI = 0;
@@ -156,9 +155,8 @@ public class Indexer {
                 }
                 ballAtMid = false;
             }
-
             if(autoRotateCued)
-                lightTimer.reset();
+                robot.rgbLight.setState(RGBLight.LightState.SET, lastIntakedColor == BallColor.G ? RGBLight.params.green : RGBLight.params.purple, params.lightFlashTime);
         }
         return oscillateValid;
     }
@@ -225,8 +223,10 @@ public class Indexer {
     private void updateIndexerAutoRotate() {
         if(!shouldAutoRotate || !autoRotateCued || indexerAutoRotateTimer.seconds() < params.csResponseDelay)
             return;
-        if (numBalls == 3)
+        if (numBalls == 3) {
             rotate(getAlignIndexerOffset());
+            robot.shooter.setResting(false);
+        }
         else if (ballAtLeft && ballAtRight)
             //rotating 180 degrees clockwise
             rotate(3);
@@ -451,9 +451,6 @@ public class Indexer {
         ballList[getOffsetI(intakeI + offset, 2)] = b2;
         ballList[getOffsetI(intakeI + offset, 4)] = b3;
         numBalls = 3;
-    }
-    public double getLightTimerSeconds() {
-        return lightTimer.seconds();
     }
     public boolean shouldOscillate() {
         return shouldOscillate;

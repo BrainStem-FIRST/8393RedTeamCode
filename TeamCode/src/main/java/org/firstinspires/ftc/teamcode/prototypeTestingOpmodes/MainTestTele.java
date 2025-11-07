@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.prototypeTestingOpmodes;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -10,14 +11,16 @@ import org.firstinspires.ftc.teamcode.robot.Robot;
 import org.firstinspires.ftc.teamcode.utils.ColorSensorBall;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 
+@Config
 @TeleOp(name="main test test tele")
 public class MainTestTele extends LinearOpMode {
+    public static double x = 56.375, y = 9.675, a = -90;
     @Override
     public void runOpMode() throws InterruptedException {
         telemetry.setMsTransmissionInterval(11);
         GamepadTracker g1 = new GamepadTracker(gamepad1);
         GamepadTracker g2 = new GamepadTracker(gamepad2);
-        Robot robot = new Robot(hardwareMap, telemetry, g1, g2, new Pose(AutoFar.params.startX, AutoFar.params.startY, Math.toRadians(AutoFar.params.startA)));
+        Robot robot = new Robot(hardwareMap, telemetry, g1, g2, new Pose(x, y, Math.toRadians(a)));
         Robot.params.autoDone = false;
         robot.initPedroTele();
         waitForStart();
@@ -27,7 +30,6 @@ public class MainTestTele extends LinearOpMode {
             g1.update();
             g2.update();
             robot.updateTele();
-
             telemetry.addData("fps", 1/(timer.seconds()-prevSec));
             telemetry.addData("voltage", robot.getBatteryVoltage());
             telemetry.addData("slow turn", robot.isSlowTurn());
@@ -65,10 +67,12 @@ public class MainTestTele extends LinearOpMode {
 
             telemetry.addLine();
             telemetry.addLine("SHOOTER----");
-            telemetry.addData("  target and current power", robot.shooter.getTargetMotorPower() + ", " + robot.shooter.getShooterPower());
-            telemetry.addData("  target and current veloc", robot.shooter.getTargetMotorVel() + ", " + robot.shooter.getShooterVelocity());
+            telemetry.addData("  target and current power", robot.shooter.getTargetMotorPower() + ", " + Math.floor(robot.shooter.getShooterPower()*100/100));
+            telemetry.addData("  target and current veloc", robot.shooter.getTargetMotorVel() + ", " + Math.floor(robot.shooter.getShooterVelocity() * 100)/100);
             telemetry.addData("  hood position", robot.shooter.getHoodPos());
             telemetry.addData("  zone", robot.shooter.getZone());
+            telemetry.addData("resting", robot.shooter.isResting());
+            telemetry.addData("hood locked", robot.shooter.isHoodLocked());
 
             telemetry.addLine();
             telemetry.addLine("INTAKE-----");

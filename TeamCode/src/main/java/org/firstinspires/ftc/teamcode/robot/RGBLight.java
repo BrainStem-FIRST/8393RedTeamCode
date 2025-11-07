@@ -17,7 +17,7 @@ public class RGBLight {
     public static class Params {
         public double minPwm = 1000, maxPwm = 2000;
         public double off = 0.01;
-        public double red = 0.11, yellow = 0.21, green = 0.45, blue = 0.61, purple = 0.84, white = 0.91;
+        public double red = 0.11, orange = 0.16, yellow = 0.21, green = 0.45, blue = 0.61, purple = 0.84, white = 0.91;
         public double flashTime = 1.4;
     }
     public static Params params = new Params();
@@ -50,17 +50,22 @@ public class RGBLight {
                 maxStateTime = -1;
             }
         }
-        else if((robot.shooter.getShooterVelocity() < robot.shooter.getMinShooterVel() || robot.shooter.getShooterVelocity() > robot.shooter.getMaxShooterVel()) && robot.shooter.getShouldShoot()) {
+        else if(!robot.shooter.isResting() && robot.shooter.getShooterVelocity() < robot.shooter.getMinShooterVel()) {
             lightState = LightState.SET;
             lightValue = params.red;
         }
+        else if(robot.shooter.getShooterVelocity() > robot.shooter.getMaxShooterVel()) {
+            lightValue = params.orange;
+            lightState = LightState.SET;
+        }
+        else if(Math.abs(robot.getGoalHeading() - robot.getHeading()) < Robot.params.headingShootError) {
+            lightState = LightState.SET;
+            lightValue = params.blue;
+        }
+
         else if(robot.isSlowTurn()) {
             lightState = LightState.SET;
             lightValue = params.yellow;
-        }
-        else if(robot.indexer.getLightTimerSeconds() < Indexer.params.lightFlashTime) {
-            lightState = LightState.SET;
-            lightValue = robot.indexer.getLastIntakedColor() == ColorSensorBall.BallColor.G ? params.green : params.purple;
         }
         else {
             lightValue = params.off;
