@@ -73,7 +73,7 @@ public class AutoFar extends LinearOpMode {
             robot.updateAprilTag();
             robot.updateSubsystems();
             updatePedroAuto();
-            telemetry.addData("pose", robot.follower.getPose());
+            telemetry.addData("pose", robot.getX() + ", " + robot.getY() + ", " + robot.getHeading());
             telemetry.addData("path i", pathNum);
             telemetry.addData("timer", pathTimer.seconds());
             telemetry.addData("green pos", Robot.params.greenPos);

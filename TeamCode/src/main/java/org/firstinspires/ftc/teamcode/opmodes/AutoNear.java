@@ -22,33 +22,35 @@ import org.firstinspires.ftc.teamcode.utils.NullGamepadTracker;
 public class AutoNear extends LinearOpMode {
     public static class Params {
         public double startX = 63, startY = 137, startA = -90;
-        public double endX = 46, endY = 72, endA = -45;
-        public double initShootY = 88;
-        public double shootX = 60, shootY = 78, shootA = -48;
+        public double endX = 20, endY = 36, endA = -45;
+        public double initShootY = 81, initShootA = -50;
+        public double shootX = 60, shootY = 78, shootA = -45;
+        public double shootFarX = 58.7, shootFarY = 16, shootFarA = -66.9;
         public double collectX = 25, collectA = -175;
 
-        public double preCollectX1 = 44, collect1Y = 93.;
+        public double preCollectX1 = 44, collect1Y = 93;
 
-        public double preCollectX2 = 47, collect2Y = 69;
+        public double preCollectX2 = 46, collect2Y = 69;
         public double preCollect2TX = 54, preCollect2TY = 64;
-
         public double preCollectX3 = 46, collectY3 = 45;
         public double preCollect3TX = 53, preCollect3TY = 39;
 
         public double leverX = 25, leverY = 80, leverA = -180;
 
-        public double shoot2TX = 54, shoot2TY = 84, shoot2TA = -170;
+        public double shoot2TX = 54, shoot2TY = 84;
 
-        public double collectDrivePower = 0.14, collectHeadingCorrectAmp = 0.3, collectStrafeCorrectAmp = -0.05;
+        public double collectDrivePower = 0.15, collectHeadingCorrectAmp = 0.3, collectStrafeCorrectAmp = -0.05;
         public double aprilTagTimeout = 0.5, aprilTagLightTime = 0.8;
         public double headingError = 7;
         public double translationalKP = 0.06, headingKP = 0.02;
         public double leverWait = 0.2;
+        public double headingConstraint = 5;
     }
     public static Params params = new Params();
     private Robot robot;
-    private Pose startPose, initShootPose, shootPose, preCollect1Pose, collect1Pose, leverPose, shoot2TPose, preCollect2Pose, preCollect2TPose, collect2Pose, preCollect3Pose, preCollect3TPose, collect3Pose, endPose;
-    private PathChain shootAndCameraPath, preCollect1Path, leverPath, shoot2Path, preCollect2Path, shoot3Path, preCollect3Path, shoot4Path, endPath;
+    private Pose startPose, initShootPose, shootPose, preCollect1Pose, collect1Pose, leverPose, shoot2TPose, preCollect2Pose, preCollect2TPose, collect2Pose, preCollect3Pose, preCollect3TPose, collect3Pose, shootFarPose, endPose;
+    private Path shootAndCameraPath;
+    private PathChain preCollect1Path, leverPath, shoot2Path, preCollect2Path, shoot3Path, preCollect3Path, shoot4Path, endPath;
 
     private int pathNum;
     private ElapsedTime pathTimer;
@@ -65,12 +67,13 @@ public class AutoNear extends LinearOpMode {
         translationalPid.setTargetPosition(0);
 
         startPose = new Pose(params.startX, params.startY, Math.toRadians(params.startA));
-        initShootPose = new Pose(params.shootX, params.initShootY, Math.toRadians(params.shootA));
+        initShootPose = new Pose(params.shootX, params.initShootY, Math.toRadians(params.initShootA));
         shootPose = new Pose(params.shootX, params.shootY, Math.toRadians(params.shootA));
+        shootFarPose = new Pose(params.shootFarX, params.shootFarY, Math.toRadians(params.shootFarA));
         preCollect1Pose = new Pose(params.preCollectX1, params.collect1Y, Math.toRadians(params.collectA));
         collect1Pose = new Pose(params.collectX, params.collect1Y, Math.toRadians(params.collectA));
         leverPose = new Pose(params.leverX, params.leverY, Math.toRadians(params.leverA));
-        shoot2TPose = new Pose(params.shoot2TX, params.shoot2TY, Math.toRadians(params.shoot2TA));
+        shoot2TPose = new Pose(params.shoot2TX, params.shoot2TY);
         preCollect2Pose = new Pose(params.preCollectX2, params.collect2Y, Math.toRadians(params.collectA));
         preCollect2TPose = new Pose(params.preCollect2TX, params.preCollect2TY);
         collect2Pose = new Pose(params.collectX, params.collect2Y, Math.toRadians(params.collectA));
@@ -78,6 +81,24 @@ public class AutoNear extends LinearOpMode {
         preCollect3TPose = new Pose(params.preCollect3TX, params.preCollect3TY);
         collect3Pose = new Pose(params.collectX, params.collectY3, Math.toRadians(params.collectA));
         endPose = new Pose(params.endX, params.endY, Math.toRadians(params.endA));
+
+        if(Robot.params.red) {
+            startPose = startPose.mirror();
+            initShootPose = initShootPose.mirror();
+            shootPose = shootPose.mirror();
+            preCollect1Pose = preCollect1Pose.mirror();
+            collect1Pose = collect1Pose.mirror();
+            leverPose = leverPose.mirror();
+            shoot2TPose = shoot2TPose.mirror();
+            preCollect2Pose = preCollect2Pose.mirror();
+            preCollect2TPose = preCollect2TPose.mirror();
+            collect2Pose = collect2Pose.mirror();
+            preCollect3Pose = preCollect3Pose.mirror();
+            preCollect3TPose = preCollect3TPose.mirror();
+            collect3Pose = collect3Pose.mirror();
+            shootFarPose = shootFarPose.mirror();
+            endPose = endPose.mirror();
+        }
 
         robot = new Robot(hardwareMap, telemetry, new NullGamepadTracker(), new NullGamepadTracker(), startPose);
         telemetry.addData("ball list", robot.indexer.getLabeledBalls());
@@ -90,10 +111,8 @@ public class AutoNear extends LinearOpMode {
         robot.intake.setIntakeSafely(false);
         robot.transfer.setShootSafely(true);
 
-        shootAndCameraPath = robot.follower.pathBuilder()
-                .addPath(new BezierLine(startPose, initShootPose))
-                .setLinearHeadingInterpolation(startPose.getHeading(), initShootPose.getHeading())
-                .build();
+        shootAndCameraPath = new Path(new BezierLine(startPose, initShootPose));
+        shootAndCameraPath.setLinearHeadingInterpolation(startPose.getHeading(), initShootPose.getHeading());
 
         preCollect1Path = robot.follower.pathBuilder()
                 .addPath(new BezierLine(shootPose, preCollect1Pose))
@@ -107,10 +126,11 @@ public class AutoNear extends LinearOpMode {
         shoot2Path = robot.follower.pathBuilder()
                 .addPath(new BezierLine(collect1Pose, shootPose))
                 .setLinearHeadingInterpolation(collect1Pose.getHeading(), shootPose.getHeading())
+                .setHeadingConstraint(Math.toRadians(params.headingConstraint))
 //                .addPath(new BezierLine(collect1Pose, shoot2TPose))
-//                .setLinearHeadingInterpolation(collect1Pose.getHeading(), shoot2TPose.getHeading())
+//                .setConstantHeadingInterpolation(collect1Pose.getHeading())
 //                .addPath(new BezierLine(shoot2TPose, shootPose))
-//                .setLinearHeadingInterpolation(shoot2TPose.getHeading(), shootPose.getHeading())
+//                .setLinearHeadingInterpolation(collect1Pose.getHeading(), shootPose.getHeading())
                 .build();
         preCollect2Path = robot.follower.pathBuilder()
                 .addPath(new BezierCurve(shootPose, preCollect2TPose, preCollect2Pose))
@@ -120,14 +140,16 @@ public class AutoNear extends LinearOpMode {
         shoot3Path = robot.follower.pathBuilder()
                 .addPath(new BezierLine(collect2Pose, shootPose))
                 .setLinearHeadingInterpolation(collect2Pose.getHeading(), shootPose.getHeading())
+                .setHeadingConstraint(Math.toRadians(params.headingConstraint))
                 .build();
         preCollect3Path = robot.follower.pathBuilder()
                 .addPath(new BezierCurve(shootPose, preCollect3TPose, preCollect3Pose))
                 .setLinearHeadingInterpolation(shootPose.getHeading(), preCollect3Pose.getHeading())
                 .build();
         shoot4Path = robot.follower.pathBuilder()
-                .addPath(new BezierLine(collect3Pose, shootPose))
-                .setLinearHeadingInterpolation(collect3Pose.getHeading(), shootPose.getHeading())
+                .addPath(new BezierLine(collect3Pose, shootFarPose))
+                .setLinearHeadingInterpolation(collect3Pose.getHeading(), shootFarPose.getHeading())
+                .setHeadingConstraint(Math.toRadians(params.headingConstraint))
                 .build();
         endPath = robot.follower.pathBuilder()
                 .addPath(new BezierLine(shootPose, endPose))
@@ -150,21 +172,15 @@ public class AutoNear extends LinearOpMode {
             if (updatePedroAuto())
                 break;
 
-            telemetry.addData("pose", Math.floor(robot.follower.getPose().getX()) + ", " + Math.floor(robot.follower.getPose().getY()) + ", " + Math.floor(robot.follower.getPose().getHeading() * 180 / Math.PI));
+            telemetry.addData("pose", Math.floor(robot.getX()*10)/10 + ", " + Math.floor(robot.getY()*10)/10 + ", " + Math.floor(robot.getHeading() * 180 / Math.PI*10)/10);
             telemetry.addData("path i & timer", pathNum + ", " + pathTimer.seconds());
-//            telemetry.addData("green pos", Robot.params.greenPos);
             telemetry.addData("follower busy", robot.follower.isBusy());
             telemetry.addData("shooter vel", Math.floor(robot.shooter.getShooterVelocity() * 100)/100);
-            telemetry.addData("min shooter vel", robot.shooter.getMinShooterVel());
             telemetry.addData("target shooter vel", robot.shooter.getTargetMotorVel());
             telemetry.addData("indexer ready to shoot", robot.indexer.prettyMuchStaticShoot());
             telemetry.addData("num balls", robot.indexer.getNumBalls());
-//            telemetry.addData("rotatedYet", rotatedYet);
-            telemetry.addData("indexer state", robot.indexer.getIndexerState());
-            telemetry.addData("intake i", robot.indexer.getIntakeI());
-            telemetry.addData("ballList", robot.indexer.getLabeledBalls());
-            telemetry.addData("shooter power", robot.shooter.getShooterPower());
             telemetry.addData("intake state", robot.intake.getIntakeState());
+            telemetry.addData("intake power", robot.intake.getIntakePower());
             telemetry.addData("transfer state", robot.transfer.getTransferState());
             telemetry.update();
         }
@@ -202,7 +218,7 @@ public class AutoNear extends LinearOpMode {
                 }
                 break;
             case 3:
-                if(robot.indexer.getNumBalls() < 3 && robot.follower.getPose().getX() > collect1Pose.getX()) {
+                if(robot.indexer.getNumBalls() < 3 && robot.getX() > collect1Pose.getX()) {
                     pidDriveY(collect1Pose);
                 }
                 else {
@@ -232,7 +248,7 @@ public class AutoNear extends LinearOpMode {
                 }
                 break;
             case 7:
-                if(robot.indexer.getNumBalls() < 3 && robot.follower.getPose().getX() > collect2Pose.getX()) {
+                if(robot.indexer.getNumBalls() < 3 && robot.getX() > collect2Pose.getX()) {
                     pidDriveY(collect2Pose);
                 }
                 else {
@@ -255,12 +271,13 @@ public class AutoNear extends LinearOpMode {
                 }
                 break;
             case 10:
-                if(robot.indexer.getNumBalls() < 3 && robot.follower.getPose().getX() > collect3Pose.getX())
+                if(robot.indexer.getNumBalls() < 3 && robot.getX() > collect3Pose.getX())
                     pidDriveY(collect3Pose);
                 else {
                     updatePath(shoot4Path);
                     robot.intake.setIntake(false);
                     robot.indexer.rotate(robot.indexer.getAlignIndexerOffset());
+                    robot.shooter.setZone(1);
                     robot.shooter.setResting(false);
                 }
                 break;
@@ -302,10 +319,13 @@ public class AutoNear extends LinearOpMode {
         pathNum++;
         pathTimer.reset();
     }
+    private Pose mirror(Pose pose) {
+        return new Pose(144 - pose.getX(), pose.getY(), Math.PI - pose.getHeading());
+    }
     private void pidDriveY(Pose pose) {
-        double strafePower = (pose.getY() - robot.follower.getPose().getY()) * params.collectStrafeCorrectAmp;
+        double strafePower = (pose.getY() - robot.getY()) * params.collectStrafeCorrectAmp;
         double goalHeading = (pose.getHeading() + Math.PI * 2) % (Math.PI * 2);
-        double heading = (robot.follower.getHeading() + Math.PI * 2) % (Math.PI * 2);
+        double heading = (robot.getHeading() + Math.PI * 2) % (Math.PI * 2);
         double turnPower = (goalHeading - heading) * params.collectHeadingCorrectAmp;
 //        telemetry.addData("strafe", strafePower);
 //        telemetry.addData("turn", turnPower);

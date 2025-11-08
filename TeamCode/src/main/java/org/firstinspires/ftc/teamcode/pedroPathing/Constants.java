@@ -43,15 +43,15 @@ public class Constants {
             .lateralZeroPowerAcceleration(-71.66)
             .centripetalScaling(0.001)
 
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.1, 0, 0, 0.01))
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.15, 0, 0, 0.01))
             .useSecondaryTranslationalPIDF(false)
 
-            .headingPIDFCoefficients(new PIDFCoefficients(0.4, 0, 0, 0.02))
+            .headingPIDFCoefficients(new PIDFCoefficients(0.35, 0, 0.0001, 0.02))
             .useSecondaryHeadingPIDF(false)
 
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.0018, 0, 0, 0.6, 0.02))
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.0018, 0, 0.000002, 0.6, 0.02))
             .useSecondaryDrivePIDF(false);
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 200, 8, 1);
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 500, 12, 1);
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         pathConstraints.setHeadingConstraint(5 * Math.PI / 180);

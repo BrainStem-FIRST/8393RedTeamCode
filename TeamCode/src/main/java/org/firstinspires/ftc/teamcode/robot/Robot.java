@@ -41,9 +41,9 @@ public class Robot {
     private final VisionPortal visionPortal;
     public static class Params {
         public boolean red = false;
-        public double goalXNearBlue = 4, goalYNearBlue = 137, goalXFarBlue = 6, goalYFarBlue = 139;
+        public double goalXNearBlue = 4, goalYNearBlue = 139, goalXFarBlue = 6, goalYFarBlue = 139;
         public double goalXNearRed = 140, goalYNearRed = 137, goalXFarRed = 138, goalYFarRed = 139;
-        public double turnCorrection = 0.14, turnAmpNormal = 0.8, turnAmpSlow = 0.2;
+        public double turnCorrection = 0.14, turnAmpNormal = 0.8, turnAmpSlow = 0.4;
         public int greenPos = -1;
         public double width = 16.75, wheelToWheelL = 10.75;
         public double intakeToFrontWheelL = 4.5, backToBackWheelL = 1.625;
@@ -53,12 +53,15 @@ public class Robot {
         public double kPBig = 0.5, kDBig = 0, kF = 0;
         public double kPSmall = 1.1, kDSmall = 0;
         public double pidSwitch = 0.1345;
-        public double minShooterTurn = 0.07, maxShooterTurn = 0.3;
+        public double minShooterTurn = 0.07, maxShooterTurn = 0.3, shootD2MoveAmp = 0.6;
         public double headingShootError = 0.03490658;
         public boolean autoDone = false;
+        public double goalInc = 0.01;
     }
+    private double goalX, goalY;
+    private double headingLockOffset;
     private PIDFController autoTurnPidBig, autoTurnPidSmall;
-    private double heading, goalHeading;
+    private double x, y, heading, goalHeading;
     private boolean slowTurn;
     public static Params params = new Params();
     // used for auto
@@ -142,18 +145,40 @@ public class Robot {
         shooter.update();
 //        binaryLight.update();
         rgbLight.update();
-        if(params.red)
-            goalHeading = shooter.getZone() == 0 ? Math.atan2(follower.getPose().getY() - params.goalYNearRed, follower.getPose().getX() - params.goalXNearRed)
-                    : Math.atan2(follower.getPose().getY() - params.goalYFarRed, follower.getPose().getX() - params.goalXFarRed);
-        else
-            goalHeading = shooter.getZone() == 0 ? Math.atan2(follower.getPose().getY() - params.goalYNearBlue, follower.getPose().getX() - params.goalXNearBlue)
-                    : Math.atan2(follower.getPose().getY() - params.goalYFarBlue, follower.getPose().getX() - params.goalXFarBlue);
+
+        // updating pose
+        goalHeading = Math.atan2(follower.getPose().getY() - goalY, follower.getPose().getX() - goalX);
         heading = follower.getHeading();
+        x = follower.getPose().getX();
+        y = follower.getPose().getY();
+    }
+    public void setGoalPos() {
+        if(params.red) {
+            if(shooter.getZone() == 0) {
+                goalX = params.goalXNearRed;
+                goalY = params.goalYNearRed;
+            }
+            else {
+                goalX = params.goalXFarRed;
+                goalY = params.goalYFarRed;
+            }
+        }
+        else {
+            if(shooter.getZone() == 0) {
+                goalX = params.goalXNearBlue;
+                goalY = params.goalYNearBlue;
+            }
+            else {
+                goalX = params.goalXFarBlue;
+                goalY = params.goalYFarBlue;
+            }
+        }
     }
     public void updateTele() {
         updatePedroTele();
         updateSubsystems();
         updateAprilTag();
+        setGoalPos();
     }
     public void updateAprilTag() {
 //        telemetry.addData("camera state", visionPortal.getCameraState());
@@ -189,47 +214,11 @@ public class Robot {
         follower.update();
     }
     public void updatePedroTele() {
-        telemetry.addData("on red", params.red);
-        if(g1.isFirstBack())
-            params.red = !params.red;
-        
-        double disp = goalHeading - heading;
+        double disp = goalHeading - heading + headingLockOffset;
+        telemetry.addData("disp", disp);
         double turnPower = Range.clip(-g1.rightStickX() * params.turnAmpNormal + g1.leftStickX() * params.turnCorrection, -1, 1);
-//        if(g1.isFirstLeftBumper()) {
-//            slowTurn = !slowTurn;
-////            if(slowTurn) {
-////                // v(t) = a * cos(bt) + c
-////                // 0 = a * cos(b*0) + c
-////                // 0 = a + c
-////                // 0 = a * cos(b*t0) + c
-////                // 0 = a*cos(b*t0) - a
-////                // 0 = a(cos(b*t0) - 1)
-////                // cos(b*t0) = 1
-////                // b*t0 = 2pi * k
-////                // b = 2pi * k/t0
-////
-////                // disp = a/b * sin(b*t0) + ct0 = x(t0)
-////                // D = a/b * sin(b*t0) - a * t0
-////                // ref b value: b*t0 = 2pi * k
-////                //
-////                // plug into disp equation:
-////                // D = a/b * sin(2pi * k) - a * t0
-////                // D = -a * t0
-////                // a = -D / t0
-////
-////                // c = D / t0
-////                // k represents the amount of stops you want (so should always equal 1)
-////                a = -disp / params.autoTurnTime;
-////                b = 2 * Math.PI / params.autoTurnTime;
-////                c = -a;
-////                Func f = new Cos(a, b, c);
-////                turnProfiler.start(f);
-////                prevHeading = heading;
-////            }
-//        }
         slowTurn = g1.leftBumper();
         if(slowTurn) {
-//                turnPower = turnProfiler.update(heading - prevHeading);
                 if(Math.abs(disp) > params.pidSwitch) {
                     telemetry.addLine("pid BIG");
                     autoTurnPidBig.updateError(disp);
@@ -244,12 +233,19 @@ public class Robot {
         }
 //        telemetry.addData("dx", params.goalX - follower.getPose().getX());
 //        telemetry.addData("dy", params.goalY - follower.getPose().getY());
-        telemetry.addData("goalHeading", Math.floor(goalHeading * 180 / Math.PI * 100)/100);
-        telemetry.addData("robot heading", Math.floor(heading * 180 / Math.PI*100)/100);
-        telemetry.addData("turn power", turnPower);
-        telemetry.addData("slow turn", slowTurn);
+//        telemetry.addData("goalHeading", Math.floor(goalHeading * 180 / Math.PI * 100)/100);
+//        telemetry.addData("robot heading", Math.floor(heading * 180 / Math.PI*100)/100);
+//        telemetry.addData("turn power", turnPower);
+//        telemetry.addData("slow turn", slowTurn);
 
-        follower.setTeleOpDrive(-g1.leftStickY(), -g1.leftStickX(), turnPower, true);
+        double axialPower = -g1.leftStickY();
+        double lateralPower = -g1.leftStickX();
+        if(Math.abs(g2.leftStickY()) > 0.03 || Math.abs(g2.leftStickX()) > 0.03 || Math.abs(g2.rightStickX()) > 0.03) {
+            axialPower = -Math.sqrt(Math.abs(g2.leftStickY())) * Math.signum(g2.leftStickY()) * params.shootD2MoveAmp;
+            lateralPower = -Math.sqrt(Math.abs(g2.leftStickX())) * Math.signum(g2.leftStickX()) * params.shootD2MoveAmp;
+            turnPower = Range.clip(-g2.rightStickX() * params.turnAmpSlow + g2.leftStickX() * params.turnCorrection, -1, 1);
+        }
+        follower.setTeleOpDrive(axialPower, lateralPower, turnPower, true);
         follower.update();
     }
     public double getBatteryVoltage() {
@@ -267,6 +263,18 @@ public class Robot {
     }
     public double getHeading() {
         return heading;
+    }
+    public double getX() {
+        return x;
+    }
+    public double getY() {
+        return y;
+    }
+    public double getGoalX() {
+        return goalX;
+    }
+    public double getGoalY() {
+        return goalY;
     }
     public double getGoalHeading() {
         return goalHeading;

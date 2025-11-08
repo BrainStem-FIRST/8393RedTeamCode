@@ -21,7 +21,7 @@ public class Indexer {
         public double kPClockwise120Auto = 0.00065, kPCounter120Auto = 0.0007;
         public double kI = 0, kD = 0, kF = 0.01, minPower = 0.085, autoMinPower = 0.095;
         public double thirdRotateAmount = 2733.333333; // encoders needed to rotate 120 degrees
-        public double oscillateAmount = 50, oscillatePower = 0.1;
+        public double oscillateAmount = 50, oscillatePower = 0.15;
         public double shootStaticVelThreshold = 500, shootStaticEncoderThreshold = 200;
         public double csStaticVelThreshold = 1000, csStaticEncoderThreshold = 200;
         public int errorThreshold = 75;
@@ -98,7 +98,7 @@ public class Indexer {
         shouldCheckMidCS = true;
 
         curPatternI = 0;
-        shouldAutoRotate = true;
+        shouldAutoRotate = false;
         pidSelected = "normal";
 
         lastIntakedColor = BallColor.N;
@@ -118,8 +118,8 @@ public class Indexer {
         rightCS.update();
         midCS.update();
         // updating color sensor values
-        boolean oscillateValid = robot.intake.getIntakeState() != Intake.IntakeState.OFF || timeSinceLastRotate.seconds() < params.timeSinceLastRotateThreshold;
-        if (shouldAutoRotate && prettyMuchStaticCS() && oscillateValid) {
+        boolean oscillateValid = robot.intake.getIntakeState() != Intake.IntakeState.OFF || timeSinceLastRotate.seconds() < params.timeSinceLastRotateThreshold || robot.g2.rightTrigger() > 0.1;
+        if (prettyMuchStaticCS() && oscillateValid) {
             // potentially check middle sensor if indexer at correct offset
             if(intakeI % 2 == intakeOffset) {
                 if (shouldCheckMidCS && emptyAt(intakeI) && midCS.getBallColor() != BallColor.N) {
@@ -163,10 +163,12 @@ public class Indexer {
     private void updateIndexer(boolean oscillateValid) {
         // listening for gamepad input to index
         if (robot.transfer.getTransferState() == Transfer.TransferState.OFF) {
-            if (robot.g1.isFirstB())
-                rotate(1);
-            else if (robot.g1.isFirstA())
-                rotate(-1);
+            if (robot.g2.isFirstB())
+                rotate(2);
+            else if (robot.g2.isFirstA())
+                rotate(-2);
+            else if(robot.g2.isFirstX())
+                rotate(getAlignIndexerOffset());
         }
 
         // listen for oscillate state change
@@ -225,7 +227,9 @@ public class Indexer {
             return;
         if (numBalls == 3) {
             rotate(getAlignIndexerOffset());
-            robot.shooter.setResting(false);
+//            robot.shooter.setResting(false);
+            robot.transfer.vels.clear();
+            robot.transfer.hoods.clear();
         }
         else if (ballAtLeft && ballAtRight)
             //rotating 180 degrees clockwise

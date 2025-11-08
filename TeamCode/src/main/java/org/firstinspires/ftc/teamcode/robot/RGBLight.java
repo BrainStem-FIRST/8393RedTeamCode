@@ -42,6 +42,14 @@ public class RGBLight {
         stateTimer = new ElapsedTime();
         maxStateTime = -1;
     }
+    public void updateInit() {
+        if(Robot.params.red)
+            lightValue = params.red;
+        else
+            lightValue = params.blue;
+        lightState = LightState.SET;
+        updateLight();
+    }
     public void update() {
         if(maxStateTime > 0) {
             if(stateTimer.seconds() > maxStateTime) {

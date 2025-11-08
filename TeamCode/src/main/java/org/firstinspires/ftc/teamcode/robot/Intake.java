@@ -50,7 +50,7 @@ public class Intake {
                     setStatePostCollecting();
                 break;
             case EXTAKING:
-                if(robot.g1.rightTrigger() < 0.1)
+                if(robot.g1.leftTrigger() < 0.1)
                     setStatePostCollecting();
                 break;
 

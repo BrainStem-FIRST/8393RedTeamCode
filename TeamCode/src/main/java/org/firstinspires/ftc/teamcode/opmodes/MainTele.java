@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.prototypeTestingOpmodes;
+package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.pedropathing.geometry.Pose;
@@ -6,23 +6,41 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.opmodes.AutoFar;
 import org.firstinspires.ftc.teamcode.robot.Robot;
 import org.firstinspires.ftc.teamcode.utils.ColorSensorBall;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 
+import java.util.Arrays;
+
 @Config
-@TeleOp(name="main test test tele")
-public class MainTestTele extends LinearOpMode {
+@TeleOp(name="TELE")
+public class MainTele extends LinearOpMode {
     public static double x = 56.375, y = 9.675, a = -90;
+    public static Pose startPose = new Pose(x, y, Math.toRadians(a));
     @Override
     public void runOpMode() throws InterruptedException {
         telemetry.setMsTransmissionInterval(11);
         GamepadTracker g1 = new GamepadTracker(gamepad1);
         GamepadTracker g2 = new GamepadTracker(gamepad2);
-        Robot robot = new Robot(hardwareMap, telemetry, g1, g2, new Pose(x, y, Math.toRadians(a)));
+        Robot robot = new Robot(hardwareMap, telemetry, g1, g2, startPose);
         Robot.params.autoDone = false;
         robot.initPedroTele();
+        while(opModeInInit()) {
+            if(g1.isFirstY())
+                startPose = new Pose(x, y, Math.toRadians(a));
+            if(g1.isFirstX())
+                Robot.params.red = false;
+            if(g1.isFirstB())
+                Robot.params.red = true;
+            robot.setGoalPos();
+            telemetry.addLine("y to reset start pose");
+            telemetry.addLine("x to set blue team");
+            telemetry.addLine("b to set red team");
+            telemetry.addData("cur team", Robot.params.red ? "RED" : "BLUE");
+            telemetry.addData("startPose", startPose.getX() + ", " + startPose.getY() + ", " + Math.floor(startPose.getHeading() * 180/Math.PI * 100)/100);
+            telemetry.addData("goalPos", robot.getGoalX() + ", " + robot.getGoalY());
+            telemetry.update();
+        }
         waitForStart();
         ElapsedTime timer = new ElapsedTime();
         double prevSec = 0;
@@ -30,6 +48,20 @@ public class MainTestTele extends LinearOpMode {
             g1.update();
             g2.update();
             robot.updateTele();
+            telemetry.addLine("SHOOTER----");
+            telemetry.addData("goal error", robot.getGoalHeading() - robot.getHeading());
+            telemetry.addData("goal pos", robot.getGoalX() + ", " + robot.getGoalY());
+            telemetry.addData("vels", Arrays.toString(robot.transfer.vels.toArray()));
+            telemetry.addData("hoods", Arrays.toString(robot.transfer.hoods.toArray()));
+            telemetry.addData("  target and current power", robot.shooter.getTargetMotorPower() + ", " + Math.floor(robot.shooter.getShooterPower()*100/100));
+            telemetry.addData("  target and current veloc", robot.shooter.getTargetMotorVel() + ", " + Math.floor(robot.shooter.getShooterVelocity() * 100)/100);
+            telemetry.addData("  min vel, max vel", robot.shooter.getMinShooterVel() + ", " + robot.shooter.getMaxShooterVel());
+            telemetry.addData("  hood position", robot.shooter.getHoodPos());
+            telemetry.addData("  zone", robot.shooter.getZone());
+            telemetry.addData("resting", robot.shooter.isResting());
+            telemetry.addData("hood locked", robot.shooter.isHoodLocked());
+            telemetry.addData("dist", robot.shooter.goalDist());
+            telemetry.addLine();
             telemetry.addData("fps", 1/(timer.seconds()-prevSec));
             telemetry.addData("voltage", robot.getBatteryVoltage());
             telemetry.addData("slow turn", robot.isSlowTurn());
@@ -65,14 +97,6 @@ public class MainTestTele extends LinearOpMode {
             telemetry.addLine("TRANSFER SPECIFIC-----");
             telemetry.addData("  state", robot.transfer.getTransferState());
 
-            telemetry.addLine();
-            telemetry.addLine("SHOOTER----");
-            telemetry.addData("  target and current power", robot.shooter.getTargetMotorPower() + ", " + Math.floor(robot.shooter.getShooterPower()*100/100));
-            telemetry.addData("  target and current veloc", robot.shooter.getTargetMotorVel() + ", " + Math.floor(robot.shooter.getShooterVelocity() * 100)/100);
-            telemetry.addData("  hood position", robot.shooter.getHoodPos());
-            telemetry.addData("  zone", robot.shooter.getZone());
-            telemetry.addData("resting", robot.shooter.isResting());
-            telemetry.addData("hood locked", robot.shooter.isHoodLocked());
 
             telemetry.addLine();
             telemetry.addLine("INTAKE-----");
@@ -89,9 +113,9 @@ public class MainTestTele extends LinearOpMode {
             telemetry.addData("rgb value", robot.rgbLight.getLightValue());
 
             telemetry.addLine("PEDRO----");
-            telemetry.addData("  x", robot.follower.getPose().getX());
-            telemetry.addData("  y", robot.follower.getPose().getY());
-            telemetry.addData("  heading (deg)", robot.follower.getPose().getHeading()*180/Math.PI);
+            telemetry.addData("  x", robot.getX());
+            telemetry.addData("  y", robot.getY());
+            telemetry.addData("  heading (deg)", robot.getHeading()*180/Math.PI);
             telemetry.update();
             prevSec = timer.seconds();
         }
