@@ -70,7 +70,6 @@ public class AutoFar extends LinearOpMode {
         waitForStart();
 
         while(opModeIsActive()) {
-            robot.updateAprilTag();
             robot.updateSubsystems();
             updatePedroAuto();
             telemetry.addData("pose", robot.getX() + ", " + robot.getY() + ", " + robot.getHeading());
@@ -99,7 +98,7 @@ public class AutoFar extends LinearOpMode {
             case 1:
                 if(!robot.follower.isBusy())
                     if(robot.indexer.getNumBalls() == 3 && Robot.params.greenPos != -1) {
-                        robot.indexer.rotate(robot.indexer.getAlignIndexerOffset());
+                        robot.indexer.rotate(robot.indexer.getAlignShootOffset());
                         robot.transfer.setShootAll(true);
                     }
                     else if(robot.indexer.getNumBalls() == 0) {

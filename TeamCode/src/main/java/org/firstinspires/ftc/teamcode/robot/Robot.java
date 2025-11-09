@@ -13,6 +13,9 @@ import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.opmodes.AutoNear;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 import org.firstinspires.ftc.teamcode.utils.NullGamepadTracker;
@@ -36,10 +39,9 @@ public class Robot {
     public final Parker parker;
     public final BinaryLight binaryLight;
     public final RGBLight rgbLight;
-
-    private final AprilTagProcessor tagProcessor;
-    private final VisionPortal visionPortal;
+    public final AprilTagDetector aprilTagDetector;
     public static class Params {
+        public double turnCollectAmp = 0.5, driveCollectAmp = 0.7;
         public boolean red = false;
         public double goalXNearBlue = 4, goalYNearBlue = 139, goalXFarBlue = 6, goalYFarBlue = 139;
         public double goalXNearRed = 140, goalYNearRed = 137, goalXFarRed = 138, goalYFarRed = 139;
@@ -79,22 +81,7 @@ public class Robot {
         follower = Constants.createFollower(hardwareMap);
         binaryLight = new BinaryLight(this);
         rgbLight = new RGBLight(this);
-
-        //Focals (pixels) - Fx: 628.438 Fy: 628.438
-        //Optical center - Cx: 986.138 Cy: 739.836
-        tagProcessor = new AprilTagProcessor.Builder()
-                .setDrawAxes(true)
-                .setDrawCubeProjection(true)
-                .setDrawTagID(true)
-                .setTagLibrary(AprilTagGameDatabase.getDecodeTagLibrary())
-                .setLensIntrinsics(628.438, 628.438, 986.138, 739.836)
-                .build();
-        visionPortal = new VisionPortal.Builder()
-                .addProcessor(tagProcessor)
-                .setCamera(hardwareMap.get(WebcamName.class, "webcam"))
-                .setCameraResolution(new Size(1920, 1200))
-                .setStreamFormat(VisionPortal.StreamFormat.MJPEG)
-                .build();
+        aprilTagDetector = new AprilTagDetector(this);
 
         follower.setStartingPose(startPose);
     }
@@ -114,29 +101,31 @@ public class Robot {
         parker = new Parker(this);
         binaryLight = new BinaryLight(this);
         rgbLight = new RGBLight(this);
-        follower = Constants.createFollower(hardwareMap);
+        aprilTagDetector = new AprilTagDetector(this);
 
-        //Focals (pixels) - Fx: 628.438 Fy: 628.438
-        //Optical center - Cx: 986.138 Cy: 739.836
-        tagProcessor = new AprilTagProcessor.Builder()
-                .setDrawAxes(true)
-                .setDrawCubeProjection(true)
-                .setDrawTagID(true)
-                .setTagLibrary(AprilTagGameDatabase.getDecodeTagLibrary())
-                .setLensIntrinsics(628.438, 628.438, 986.138, 739.836)
-                .build();
-        visionPortal = new VisionPortal.Builder()
-                .addProcessor(tagProcessor)
-                .setCamera(hardwareMap.get(WebcamName.class, "webcam"))
-                .setCameraResolution(new Size(1920, 1200))
-                .setStreamFormat(VisionPortal.StreamFormat.MJPEG)
-                .build();
+        follower = Constants.createFollower(hardwareMap);
 
         autoTurnPidBig = new PIDFController(new PIDFCoefficients(params.kPBig, 0, params.kDBig, params.kF));
         autoTurnPidSmall = new PIDFController(new PIDFCoefficients(params.kPSmall, 0, params.kDSmall, params.kF));
         follower.setStartingPose(startPose);
     }
+    public void setStartPose(Pose startPose) {
+        follower.setStartingPose(startPose);
+    }
+    public void updatePattern() {
+        if(aprilTagDetector.getTag(21) != null)
+            params.greenPos = 0;
+        else if(aprilTagDetector.getTag(22) != null)
+            params.greenPos = 1;
+        else if(aprilTagDetector.getTag(23) != null)
+            params.greenPos = 2;
+    }
+    public void updateAprilTagPose() {
+
+    }
+
     public void updateSubsystems() {
+        aprilTagDetector.update();
         indexer.resetCaches();
         shooter.resetCaches();
         intake.update();
@@ -145,6 +134,7 @@ public class Robot {
         shooter.update();
 //        binaryLight.update();
         rgbLight.update();
+        parker.update();
 
         // updating pose
         goalHeading = Math.atan2(follower.getPose().getY() - goalY, follower.getPose().getX() - goalX);
@@ -176,44 +166,15 @@ public class Robot {
     }
     public void updateTele() {
         updatePedroTele();
+        updatePattern();
         updateSubsystems();
-        updateAprilTag();
         setGoalPos();
-    }
-    public void updateAprilTag() {
-//        telemetry.addData("camera state", visionPortal.getCameraState());
-        StringBuilder tags = new StringBuilder();
-        try {
-            ArrayList<AprilTagDetection> detections = tagProcessor.getDetections();
-            if (!detections.isEmpty()) {
-                for (int i = 0; i < detections.size(); i++) {
-                    AprilTagDetection tag = tagProcessor.getDetections().get(i);
-                    tags.append(tag.id).append(", ");
-
-                    // calculating pattern
-                    if (params.greenPos == -1)
-                        switch (tag.id) {
-                            case 21:
-                                params.greenPos = 0;
-                                break;
-                            case 22:
-                                params.greenPos = 1;
-                                break;
-                            case 23:
-                                params.greenPos = 2;
-                                break;
-                        }
-                }
-            }
-        } catch(IndexOutOfBoundsException ignored) {}
-        // 21: gpp, 22: pgp, 23: ppg
-//        telemetry.addData("tags", tags);
     }
     public void initPedroTele() {
         follower.startTeleopDrive();
         follower.update();
     }
-    public void updatePedroTele() {
+    private void updatePedroTele() {
         double disp = goalHeading - heading + headingLockOffset;
         telemetry.addData("disp", disp);
         double turnPower = Range.clip(-g1.rightStickX() * params.turnAmpNormal + g1.leftStickX() * params.turnCorrection, -1, 1);
@@ -244,6 +205,11 @@ public class Robot {
             axialPower = -Math.sqrt(Math.abs(g2.leftStickY())) * Math.signum(g2.leftStickY()) * params.shootD2MoveAmp;
             lateralPower = -Math.sqrt(Math.abs(g2.leftStickX())) * Math.signum(g2.leftStickX()) * params.shootD2MoveAmp;
             turnPower = Range.clip(-g2.rightStickX() * params.turnAmpSlow + g2.leftStickX() * params.turnCorrection, -1, 1);
+        }
+        else if(intake.getIntakeState() == Intake.IntakeState.INTAKING) {
+            axialPower *= params.driveCollectAmp;
+            lateralPower *= params.driveCollectAmp;
+            turnPower *= params.turnCollectAmp;
         }
         follower.setTeleOpDrive(axialPower, lateralPower, turnPower, true);
         follower.update();

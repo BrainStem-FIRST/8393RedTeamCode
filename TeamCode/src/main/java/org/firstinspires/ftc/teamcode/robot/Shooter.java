@@ -20,17 +20,19 @@ public class Shooter {
         public double nearDist = 65;
         public double midDist = (farDistTele + nearDist) / 2;
 
-        public double shooterVelocityFar = 400, shooterPowerFar = 0.62;
-        public double shooterVelocityNear = 290, shooterPowerNear = 0.46;
+        public double shooterVelFarAuto = 380;
+        public double shooterVelocityFar = 380, shooterPowerFar = 0.6;
+        public double shooterVelocityNear = 275, shooterPowerNear = 0.47;
 
-        public double minShooterVelFar = 360, maxShooterVelFar = 415;
+        public double minShooterVelFarAuto = 370, maxShooterVelFarAuto = 400;
+        public double minShooterVelFar = 370, maxShooterVelFar = 400;
         public double minShooterVelNear = 260, maxShooterVelNear = 300;
         public double restPowerOffset = 0.5;
         public int minHoodPwm = 1800, maxHoodPwm = 1400;
         public double hoodNearM = -0.0113448, hoodNearB = 3.64514; //y=-0.0113448x+3.64514
-        public double hoodFarM = -0.00223382, hoodFarB = 0.900779; //y=-0.00223382x+0.900779
-//        public double hoodNearM = 0, hoodNearB = 0.43;
-//        public double hoodFarM = 0, hoodFarB = 0;
+        public double hoodFarM = -0.00223382, hoodFarB = 0.865; //y=-0.00223382x+0.900779
+        public double hoodFarAutoM = -0.00223382, hoodFarAutoB = 0.865;
+        public double hoodNearOffset = 13;
 
         public double manualHoodInc = 0.05, manualShooterInc = 2.5;
         public double hoodOffset;
@@ -49,11 +51,12 @@ public class Shooter {
     private boolean powerUpdated, velUpdated; // caching functionality
     private double targetHoodPos;
     private double hoodOffset;
-    private final Line hoodFarRegress, hoodNearRegress; // regressions output desired hood position as function of motor velocity (in degrees/s)
+    private final Line hoodFarAutoRegress, hoodFarRegress, hoodNearRegress; // regressions output desired hood position as function of motor velocity (in degrees/s)
     private int zone;
     private double shooterPower, prevShooterPower, prevHoodPos;
-    private boolean resting, hoodLocked, zoneChangeCued;
+    private boolean resting, hoodLocked;
     private double goalDist;
+    private boolean zoneChangeCued;
     public Shooter(Robot robot) {
         this.robot = robot;
 
@@ -68,6 +71,7 @@ public class Shooter {
         hoodServo = robot.hardwareMap.get(ServoImplEx.class, "hoodServo");
         hoodServo.setPwmRange(new PwmControl.PwmRange(params.minHoodPwm, params.maxHoodPwm));
 
+        hoodFarAutoRegress = new Line(params.hoodFarAutoM, params.hoodFarAutoB);
         hoodFarRegress = new Line(params.hoodFarM, params.hoodFarB);
         hoodNearRegress = new Line(params.hoodNearM, params.hoodNearB);
 
@@ -83,7 +87,7 @@ public class Shooter {
         shooterPid.setTarget(targetMotorVel);
 
         hoodOffset = params.hoodOffset;
-        resting = true;
+        resting = false;
     }
     public void resetCaches() {
         powerUpdated = false;
@@ -92,20 +96,18 @@ public class Shooter {
     public void update() {
         goalDist = Math.sqrt(Math.pow(robot.getX() - robot.getGoalX(), 2) + Math.pow(robot.getY() - robot.getGoalY(), 2));
 
-        if(robot.g2.isFirstY())
+        if(robot.g2.isFirstStart())
             resting = !resting;
-
         // zone changers
-        if(robot.g1.isFirstDpadUp() || (zoneChangeCued && zone == 1)) {
+        if(robot.g2.isFirstDpadUp() || (zoneChangeCued && zone == 0)) {
             zone = 0;
             targetMotorVel = params.shooterVelocityNear;
             minMotorVel = params.minShooterVelNear;
             maxMotorVel = params.maxShooterVelNear;
             targetMotorPower = params.shooterPowerNear;
             shooterPid.setTarget(targetMotorVel);
-            zoneChangeCued = false;
         }
-        else if(robot.g1.isFirstDpadDown() || (zoneChangeCued && zone == 0)) {
+        else if(robot.g2.isFirstDpadDown() || (zoneChangeCued && zone == 1)) {
             zone = 1;
             targetMotorVel = params.shooterVelocityFar;
             minMotorVel = params.minShooterVelFar;
@@ -114,28 +116,38 @@ public class Shooter {
             shooterPid.setTarget(targetMotorVel);
             zoneChangeCued = false;
         }
+        else if(zoneChangeCued && zone == 2) {
+            targetMotorVel = params.shooterVelFarAuto;
+            minMotorVel = params.minShooterVelFarAuto;
+            maxMotorVel = params.maxShooterVelFarAuto;
+            targetMotorPower = params.shooterPowerFar;
+            shooterPid.setTarget(targetMotorVel);
+            zoneChangeCued = false;
+        }
         // setting shooter power
-        if(robot.g2.isFirstDpadRight()) {
-            targetMotorVel += params.manualShooterInc;
-            shooterPid.setTarget(targetMotorVel);
-        }
-        else if(robot.g2.isFirstDpadLeft()) {
-            targetMotorVel -= params.manualShooterInc;
-            shooterPid.setTarget(targetMotorVel);
-        }
+//        if(robot.g2.isFirstDpadRight()) {
+//            targetMotorVel += params.manualShooterInc;
+//            shooterPid.setTarget(targetMotorVel);
+//        }
+//        else if(robot.g2.isFirstDpadLeft()) {
+//            targetMotorVel -= params.manualShooterInc;
+//            shooterPid.setTarget(targetMotorVel);
+//        }
 
         // automatically setting hood
         if(!hoodLocked) {
             if (zone == 0)
-                targetHoodPos = Range.clip(Range.clip(hoodNearRegress.eval(getShooterVelocity()), 0, 1) + hoodOffset, 0, 1);
-            else
+                targetHoodPos = Range.clip(Range.clip(hoodNearRegress.eval(getShooterVelocity() + params.hoodNearOffset), 0, 1) + hoodOffset, 0, 1);
+            else if(zone == 1)
                 targetHoodPos = Range.clip(Range.clip(hoodFarRegress.eval(getShooterVelocity()), 0, 1) + hoodOffset, 0, 1);
+            else
+                targetHoodPos = Range.clip(Range.clip(hoodFarAutoRegress.eval(getShooterVelocity()), 0, 1) + hoodOffset, 0, 1);
         }
         // manually setting hood
-        if(robot.g2.isFirstDpadUp())
-            hoodOffset += params.manualHoodInc;
-        else if(robot.g2.isFirstDpadDown())
-            hoodOffset -= params.manualHoodInc;
+//        if(robot.g2.isFirstDpadUp())
+//            hoodOffset += params.manualHoodInc;
+//        else if(robot.g2.isFirstDpadDown())
+//            hoodOffset -= params.manualHoodInc;
 
         // calculating shooter power
         shooterPower = 0;
@@ -167,8 +179,8 @@ public class Shooter {
         return zone;
     }
     public void setZone(int zone) {
-        if(zone != this.zone)
-            zoneChangeCued = true;
+        zoneChangeCued = true;
+        this.zone = zone;
     }
     private void setShooterPower(double power) {
         motor1.setPower(power);

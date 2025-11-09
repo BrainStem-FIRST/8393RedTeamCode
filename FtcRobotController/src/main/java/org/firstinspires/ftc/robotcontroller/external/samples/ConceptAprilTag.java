@@ -29,6 +29,7 @@
 
 package org.firstinspires.ftc.robotcontroller.external.samples;
 
+import android.annotation.SuppressLint;
 import android.util.Size;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -189,6 +190,7 @@ public class ConceptAprilTag extends LinearOpMode {
     /**
      * Add telemetry about AprilTag detections.
      */
+    @SuppressLint("DefaultLocale")
     private void telemetryAprilTag() {
 
         List<AprilTagDetection> currentDetections = aprilTag.getDetections();

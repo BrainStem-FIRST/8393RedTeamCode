@@ -34,6 +34,7 @@ public class Parker {
         switch(parkState) {
             case DOWN:
                 if(robot.g1.isFirstX()) {
+                    robot.shooter.setResting(true);
                     pid.setTarget(kickStandEncoder);
                     motorPower = getUpPower();
                     parkState = ParkState.KICKSTAND;

@@ -21,8 +21,6 @@ public class ParkTestTele extends LinearOpMode {
             g1.update();
             g2.update();
 
-            robot.updatePedroTele();
-
             if(g1.isFirstA())
                 testing = !testing;
             if(g1.isFirstB())

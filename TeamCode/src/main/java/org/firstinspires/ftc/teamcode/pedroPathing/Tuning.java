@@ -7,6 +7,7 @@ import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.follower;
 import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.stopRobot;
 import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.telemetryM;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.bylazar.configurables.PanelsConfigurables;
 import com.bylazar.configurables.annotations.IgnoreConfigurable;
@@ -23,6 +24,8 @@ import com.pedropathing.telemetry.SelectableOpMode;
 import com.pedropathing.util.*;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -1087,7 +1090,10 @@ class Triangle extends OpMode {
     private final Pose endPose = new Pose(24, 24, Math.toRadians(45));
 
     private PathChain triangle;
+    private PathChain line1, line2, line3;
+    private int pathNum;
 
+    private Telemetry dashboardTelemetry;
     /**
      * This runs the OpMode, updating the Follower as well as printing out the debug statements to
      * the Telemetry, as well as the Panels.
@@ -1096,10 +1102,39 @@ class Triangle extends OpMode {
     public void loop() {
         follower.update();
         drawCurrentAndHistory();
-
-        if (follower.atParametricEnd()) {
-            follower.followPath(triangle, true);
+        double goalX = 0;
+        double goalY = 0;
+        switch(pathNum) {
+            case 0:
+                if(!follower.isBusy()) {
+                    pathNum++;
+                    follower.followPath(line1);
+                }
+                goalX = startPose.getX();
+                goalY = startPose.getY();
+                break;
+            case 1:
+                if(!follower.isBusy()) {
+                    pathNum++;
+                    follower.followPath(line2);
+                }
+                goalX = interPose.getX();
+                goalY = interPose.getY();
+                break;
+            case 2:
+                if(!follower.isBusy()) {
+                    pathNum = 0;
+                    follower.followPath(line3);
+                }
+                goalX = endPose.getX();
+                goalY = endPose.getY();
+                break;
         }
+        dashboardTelemetry.addData("error", Math.sqrt(Math.pow(follower.getPose().getX() - goalX, 2) + Math.pow(follower.getPose().getY() - goalY, 2)));
+        dashboardTelemetry.update();
+//        if (follower.atParametricEnd()) {
+//            follower.followPath(triangle, true);
+//        }
     }
 
     @Override
@@ -1117,6 +1152,18 @@ class Triangle extends OpMode {
     /** Creates the PathChain for the "triangle".*/
     @Override
     public void start() {
+        line1 = follower.pathBuilder().addPath(new BezierLine(startPose, interPose))
+                .setLinearHeadingInterpolation(startPose.getHeading(), interPose.getHeading())
+                .build();
+        line2 = follower.pathBuilder()
+                .addPath(new BezierLine(interPose, endPose))
+                .setLinearHeadingInterpolation(interPose.getHeading(), endPose.getHeading())
+                .build();
+        line3 = follower.pathBuilder()
+                .addPath(new BezierLine(endPose, startPose))
+                .setLinearHeadingInterpolation(endPose.getHeading(), startPose.getHeading())
+                .build();
+
         follower.setStartingPose(startPose);
 
         triangle = follower.pathBuilder()
@@ -1128,7 +1175,11 @@ class Triangle extends OpMode {
                 .setLinearHeadingInterpolation(endPose.getHeading(), startPose.getHeading())
                 .build();
 
-        follower.followPath(triangle);
+
+        FtcDashboard dashboard = FtcDashboard.getInstance();
+        dashboardTelemetry = dashboard.getTelemetry();
+
+//        follower.followPath(triangle);
     }
 }
 

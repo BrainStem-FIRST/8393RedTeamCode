@@ -65,7 +65,10 @@ public class Transfer {
                 }
                 if(transferTimer.seconds() > params.transferStopperMoveTime + params.transferMoveTime) {
                     setTransferResetting();
-                    robot.indexer.rotate(robot.indexer.getAlignIndexerOffset());
+                    if(robot.indexer.getNumBalls() > 0)
+                        robot.indexer.rotate(robot.indexer.getAlignShootOffset());
+                    else
+                        robot.indexer.rotate(robot.indexer.getAlignCollectOffset());
                 }
                 break;
             case RESETTING:

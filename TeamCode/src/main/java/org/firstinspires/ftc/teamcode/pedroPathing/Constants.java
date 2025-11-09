@@ -43,18 +43,26 @@ public class Constants {
             .lateralZeroPowerAcceleration(-71.66)
             .centripetalScaling(0.001)
 
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.15, 0, 0, 0.01))
-            .useSecondaryTranslationalPIDF(false)
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.1, 0, 0.001, 0.03))
+            .useSecondaryTranslationalPIDF(true)
+            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.12, 0, 0.005, 0.03))
 
-            .headingPIDFCoefficients(new PIDFCoefficients(0.35, 0, 0.0001, 0.02))
-            .useSecondaryHeadingPIDF(false)
+            .headingPIDFCoefficients(new PIDFCoefficients(0.7, 0, 0.001, 0.02))
+            .useSecondaryHeadingPIDF(true)
+            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(0.8, 0, 0.001, 0.02))
 
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.0018, 0, 0.000002, 0.6, 0.02))
-            .useSecondaryDrivePIDF(false);
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 500, 12, 1);
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.0011, 0, 0.00004, 0.6, 0.05))
+            .useSecondaryDrivePIDF(false)
+            .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0.0013, 0, 0.00005, 0.6, 0.05));
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 10000, 8, 1.5);
 
     public static Follower createFollower(HardwareMap hardwareMap) {
-        pathConstraints.setHeadingConstraint(5 * Math.PI / 180);
+        pathConstraints.setHeadingConstraint(3 * Math.PI / 180);
+        followerConstants.setHeadingPIDFSwitch(0.1396);
+        pathConstraints.setTranslationalConstraint(3);
+        followerConstants.setTranslationalPIDFSwitch(5);
+        followerConstants.setDrivePIDFSwitch(5);
+//        followerConstants.setHeadingPIDFSwitch(10 * Math.PI / 180);
         return new FollowerBuilder(followerConstants, hardwareMap)
                 .pathConstraints(pathConstraints)
                 .mecanumDrivetrain(driveConstants)

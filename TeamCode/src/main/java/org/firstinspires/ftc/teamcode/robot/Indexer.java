@@ -17,8 +17,8 @@ public class Indexer {
         public double manualIndexPowerAmp = 0.1;
         public int greenPos = 0; // ranges 0-2 (0=green should be shot first, 2=green should be shot last)
         public double csResponseDelay = 0;
-        public double kPClockwise60 = 0.00055, kPCounter60 = 0.0006, kPClockwise120 = 0.00065, kPCounter120 = 0.0007, kPClockwise180 = 0.0005;
-        public double kPClockwise120Auto = 0.00065, kPCounter120Auto = 0.0007;
+        public double kPClockwise60 = 0.00055, kPCounter60 = 0.0006, kPClockwise120 = 0.00062, kPCounter120 = 0.00067, kPClockwise180 = 0.0005;
+        public double kPClockwise120Auto = 0.00062, kPCounter120Auto = 0.00067;
         public double kI = 0, kD = 0, kF = 0.01, minPower = 0.085, autoMinPower = 0.095;
         public double thirdRotateAmount = 2733.333333; // encoders needed to rotate 120 degrees
         public double oscillateAmount = 50, oscillatePower = 0.15;
@@ -63,15 +63,13 @@ public class Indexer {
     private BallColor lastIntakedColor;
     private double intakeOffset;
     private boolean inAutonomous;
+    private int autoIndexMode;
 
     public Indexer(Robot robot) {
         this.robot = robot;
         indexer = robot.hardwareMap.get(CRServo.class, "indexer");
-
         indexPower = 0;
         indexerEncoderTracker = robot.hardwareMap.get(DcMotorEx.class, "FL");
-        resetIndexerEncoder();
-        targetEncoder = 0;
         cwPid60 = new PIDFController(new PIDFCoefficients(params.kPClockwise60, params.kI, params.kD, params.kF));
         ccwPid60 = new PIDFController(new PIDFCoefficients(params.kPCounter60, params.kI, params.kD, params.kF));
         cwPid120 = new PIDFController(new PIDFCoefficients(params.kPClockwise120, params.kI, params.kD, params.kF));
@@ -104,6 +102,9 @@ public class Indexer {
         lastIntakedColor = BallColor.N;
         indexerState = IndexerState.TARGET;
         shouldOscillate = true;
+    }
+    public void setAutoIndexMode(int mode) {
+        autoIndexMode = mode;
     }
     public void resetCaches() {
         encoderUpdated = false;
@@ -165,10 +166,18 @@ public class Indexer {
         if (robot.transfer.getTransferState() == Transfer.TransferState.OFF) {
             if (robot.g2.isFirstB())
                 rotate(2);
-            else if (robot.g2.isFirstA())
+            else if (robot.g2.isFirstX())
                 rotate(-2);
-            else if(robot.g2.isFirstX())
-                rotate(getAlignIndexerOffset());
+            else if(robot.g2.isFirstY())
+                rotate(getAlignShootOffset());
+            else if(robot.g2.isFirstA())
+                rotate(getAlignCollectOffset());
+            else if(robot.g2.isFirstLeftBumper())
+                resetEncoder();
+            else if(robot.g2.isFirstRightBumper()) {
+                curPatternI = (curPatternI + 2) % 3;
+                rotate(getAlignShootOffset());
+            }
         }
 
         // listen for oscillate state change
@@ -223,10 +232,12 @@ public class Indexer {
         indexPower = Math.max(Math.abs(indexPower), inAutonomous ? params.autoMinPower : params.minPower) * Math.signum(indexPower) * -1;
     }
     private void updateIndexerAutoRotate() {
-        if(!shouldAutoRotate || !autoRotateCued || indexerAutoRotateTimer.seconds() < params.csResponseDelay)
+        if(!shouldAutoRotate || !autoRotateCued || indexerAutoRotateTimer.seconds() < params.csResponseDelay) {
+            autoRotateCued = false;
             return;
+        }
         if (numBalls == 3) {
-            rotate(getAlignIndexerOffset());
+            rotate(getAlignShootOffset());
 //            robot.shooter.setResting(false);
             robot.transfer.vels.clear();
             robot.transfer.hoods.clear();
@@ -257,35 +268,65 @@ public class Indexer {
         }
 
         else if(ballAtMid) {
-            if(!emptyAt(getOffsetI(getShooterI(), 1)))
-                // rotating 120 degrees clockwise
-                rotate(-2);
-            else
-                rotate(2);
+            if(autoIndexMode == 0) {
+                if (!emptyAt(getOffsetI(getShooterI(), 1)))
+                    // rotating 120 degrees clockwise
+                    rotate(-2);
+                else
+                    rotate(2);
+            }
+            else {
+                if(numBalls == 1)
+                    rotate(3);
+                else if(!emptyAt(getOffsetI(getShooterI(), 1)))
+                    rotate(-2);
+                else
+                    rotate(2);
+            }
         }
         autoRotateCued = false;
         ballAtLeft = false;
         ballAtMid = false;
         ballAtRight = false;
     }
-    private void resetIndexerEncoder() {
+    public void resetEncoder() {
         indexerEncoderTracker.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         indexerEncoderTracker.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
     }
     // returns offset to rotate indexer to align it to next pattern color (pos=clockwise, neg=ccw, -10=no valid pattern color)
-    public int getAlignIndexerOffset() {
+    public int getAlignShootOffset() {
         if(numBalls == 0)
-            return 1;
+            return intakeI % 2 == intakeOffset ? 1 : 0;
         BallColor desiredColor = curPatternI == Robot.params.greenPos ? BallColor.G : BallColor.P;
-        int desiredI = findBallI(desiredColor);
+        int desiredI = findBallI(desiredColor, getShooterI());
         if(desiredI == -1) // finding index of other color ball if there is no balls of correct color
-            desiredI = findBallI(desiredColor == BallColor.G ? BallColor.P : BallColor.G);
+            desiredI = findBallI(desiredColor == BallColor.G ? BallColor.P : BallColor.G, getShooterI());
         int disp = getShooterI() - desiredI;
         if(disp > 2)
             disp -= 6;
         else if(disp < -3)
             disp += 6;
         return disp;
+    }
+    public int getAlignCollectOffset() {
+        if(numBalls == 3)
+            return intakeI % 2 == intakeOffset ? 0 : 1;
+        else if(emptyAt(intakeI) && (intakeI + intakeOffset) % 2 == 0)
+            return 0;
+        else if((intakeI + intakeOffset) % 2 == 0) {
+            if(emptyAt(getOffsetI(getShooterI(), -1)))
+                return -2;
+            else
+                return 2;
+        }
+        else {
+            if(emptyAt(getLeftIntakeI()))
+                return 1;
+            else if(emptyAt(getRightIntakeI()))
+                return -1;
+            else
+                return 3;
+        }
     }
     private PIDFController calcRotationPid(int sixth) {
         if(sixth == 1) {
@@ -390,12 +431,12 @@ public class Indexer {
     public int getShooterI() {
         return (intakeI + 3) % 6;
     }
-    public int findBallI(BallColor ballColor) {
+    public int findBallI(BallColor ballColor, int targetI) {
         for(int i = 0; i < 4; i++) {
-            int index = getOffsetI(getShooterI(), i);
+            int index = getOffsetI(targetI, i);
             if(getBallAt(index) == ballColor)
                 return index;
-            index = getOffsetI(getShooterI(), -i);
+            index = getOffsetI(targetI, -i);
             if(getBallAt(index) == ballColor)
                 return index;
         }
