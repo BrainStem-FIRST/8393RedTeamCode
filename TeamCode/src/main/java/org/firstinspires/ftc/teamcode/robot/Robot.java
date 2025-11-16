@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.robot;
 
-import android.util.Size;
-
 import com.acmerobotics.dashboard.config.Config;
 import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.control.PIDFController;
@@ -12,19 +10,11 @@ import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.teamcode.opmodes.AutoNear;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 import org.firstinspires.ftc.teamcode.utils.NullGamepadTracker;
-import org.firstinspires.ftc.vision.VisionPortal;
-import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
-import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
-import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
-
-import java.util.ArrayList;
 
 @Config
 public class Robot {
@@ -39,7 +29,8 @@ public class Robot {
     public final Parker parker;
     public final BinaryLight binaryLight;
     public final RGBLight rgbLight;
-    public final AprilTagDetector aprilTagDetector;
+//    public final WebcamAprilTagDetector aprilTagDetector;
+    public Limelight limelight;
     public static class Params {
         public double turnCollectAmp = 0.5, driveCollectAmp = 0.7;
         public boolean red = false;
@@ -81,7 +72,8 @@ public class Robot {
         follower = Constants.createFollower(hardwareMap);
         binaryLight = new BinaryLight(this);
         rgbLight = new RGBLight(this);
-        aprilTagDetector = new AprilTagDetector(this);
+//        aprilTagDetector = new WebcamAprilTagDetector(this);
+        limelight = new Limelight(this);
 
         follower.setStartingPose(startPose);
     }
@@ -101,7 +93,8 @@ public class Robot {
         parker = new Parker(this);
         binaryLight = new BinaryLight(this);
         rgbLight = new RGBLight(this);
-        aprilTagDetector = new AprilTagDetector(this);
+//        aprilTagDetector = new WebcamAprilTagDetector(this);
+        limelight = new Limelight(this);
 
         follower = Constants.createFollower(hardwareMap);
 
@@ -113,34 +106,46 @@ public class Robot {
         follower.setStartingPose(startPose);
     }
     public void updatePattern() {
-        if(aprilTagDetector.getTag(21) != null)
-            params.greenPos = 0;
-        else if(aprilTagDetector.getTag(22) != null)
-            params.greenPos = 1;
-        else if(aprilTagDetector.getTag(23) != null)
-            params.greenPos = 2;
+//        if(aprilTagDetector.getTag(21) != null)
+//            params.greenPos = 0;
+//        else if(aprilTagDetector.getTag(22) != null)
+//            params.greenPos = 1;
+//        else if(aprilTagDetector.getTag(23) != null)
+//            params.greenPos = 2;
     }
     public void updateAprilTagPose() {
 
     }
 
     public void updateSubsystems() {
-        aprilTagDetector.update();
+//        aprilTagDetector.updateDetections();
+        limelight.update();
         indexer.resetCaches();
         shooter.resetCaches();
         intake.update();
         indexer.update();
         transfer.update();
         shooter.update();
-//        binaryLight.update();
         rgbLight.update();
         parker.update();
 
         // updating pose
-        goalHeading = Math.atan2(follower.getPose().getY() - goalY, follower.getPose().getX() - goalX);
         heading = follower.getHeading();
         x = follower.getPose().getX();
         y = follower.getPose().getY();
+        // updating with april tag
+        if(g1.isFirstBack()) {
+            double aprilX = limelight.getBotPos().x;
+            double aprilY = limelight.getBotPos().y;
+            double aprilHeading = limelight.getBotHeading();
+            x = avg(x, aprilX);
+            y = avg(y, aprilY);
+            heading = avg(aprilHeading, heading);
+        }
+        goalHeading = Math.atan2(follower.getPose().getY() - goalY, follower.getPose().getX() - goalX);
+    }
+    private double avg(double n1, double n2) {
+        return (n1 + n2) / 2;
     }
     public void setGoalPos() {
         if(params.red) {
@@ -176,7 +181,6 @@ public class Robot {
     }
     private void updatePedroTele() {
         double disp = goalHeading - heading + headingLockOffset;
-        telemetry.addData("disp", disp);
         double turnPower = Range.clip(-g1.rightStickX() * params.turnAmpNormal + g1.leftStickX() * params.turnCorrection, -1, 1);
         slowTurn = g1.leftBumper();
         if(slowTurn) {

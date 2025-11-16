@@ -1,30 +1,30 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.robot.Robot;
-import org.firstinspires.ftc.teamcode.utils.ColorSensorBall;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
-
-import java.util.Arrays;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 @Config
 @TeleOp(name="TELE")
 public class MainTele extends LinearOpMode {
-    public static double x = 24, y = 72, a = 180;
+    public static double x = 0, y = 0, a = 0;
     @Override
     public void runOpMode() throws InterruptedException {
+        telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         telemetry.setMsTransmissionInterval(11);
         GamepadTracker g1 = new GamepadTracker(gamepad1);
         GamepadTracker g2 = new GamepadTracker(gamepad2);
         Robot robot = new Robot(hardwareMap, telemetry, g1, g2, new Pose(x, y, Math.toRadians(a)));
         Robot.params.autoDone = false;
         robot.initPedroTele();
-        robot.indexer.setAutoBallList(1, ColorSensorBall.BallColor.N, ColorSensorBall.BallColor.N, ColorSensorBall.BallColor.N);
         while(opModeInInit()) {
             g1.update();
             g2.update();
@@ -36,43 +36,14 @@ public class MainTele extends LinearOpMode {
             if(g2.leftBumper())
                 robot.indexer.resetEncoder();
             robot.setGoalPos();
-            telemetry.addData("x, b", g1.x() + ", " + g1.b());
-            telemetry.addLine("x to set blue team");
-            telemetry.addLine("b to set red team");
-            telemetry.addData("cur team", Robot.params.red ? "RED" : "BLUE");
-            telemetry.addData("startPose", robot.follower.getPose().getX() + ", " + robot.follower.getPose().getY() + ", " + Math.floor(robot.follower.getPose().getHeading() * 180/Math.PI));
-            telemetry.addData("goalPos", robot.getGoalX() + ", " + robot.getGoalY());
-            telemetry.update();
         }
         waitForStart();
         ElapsedTime timer = new ElapsedTime();
-        double prevSec = 0;
+        AprilTagDetection tag = null;
         while (opModeIsActive()) {
             g1.update();
             g2.update();
             robot.updateTele();
-//            telemetry.addData("april tags", robot.aprilTagDetector.getTagData());
-//            telemetry.addData("location data", robot.aprilTagDetector.getLocationData(20));
-//            telemetry.addLine("SHOOTER----");
-//            telemetry.addData("goal error", robot.getGoalHeading() - robot.getHeading());
-//            telemetry.addData("goal pos", robot.getGoalX() + ", " + robot.getGoalY());
-//            telemetry.addData("vels", Arrays.toString(robot.transfer.vels.toArray()));
-//            telemetry.addData("hoods", Arrays.toString(robot.transfer.hoods.toArray()));
-//            telemetry.addData("  target and current power", robot.shooter.getTargetMotorPower() + ", " + Math.floor(robot.shooter.getShooterPower()*100/100));
-//            telemetry.addData("  target and current veloc", robot.shooter.getTargetMotorVel() + ", " + Math.floor(robot.shooter.getShooterVelocity() * 100)/100);
-//            telemetry.addData("  min vel, max vel", robot.shooter.getMinShooterVel() + ", " + robot.shooter.getMaxShooterVel());
-//            telemetry.addData("  hood position", robot.shooter.getHoodPos());
-//            telemetry.addData("  zone", robot.shooter.getZone());
-//            telemetry.addData("resting", robot.shooter.isResting());
-//            telemetry.addData("hood locked", robot.shooter.isHoodLocked());
-//            telemetry.addData("dist", robot.shooter.goalDist());
-//            telemetry.addLine();
-//            telemetry.addData("fps", 1/(timer.seconds()-prevSec));
-//            telemetry.addData("voltage", robot.getBatteryVoltage());
-//            telemetry.addData("slow turn", robot.isSlowTurn());
-            telemetry.addData("green pos", Robot.params.greenPos);
-            telemetry.addData("cur pattern i", robot.indexer.getCurPatternI());
-
 //            telemetry.addLine("INDEXER----");
 //            telemetry.addData("  state", robot.indexer.getIndexerState());
 //            telemetry.addData("  oscillate target", robot.indexer.getOscillateTargetEncoder());
@@ -107,21 +78,32 @@ public class MainTele extends LinearOpMode {
 //            telemetry.addData("  state", robot.intake.getIntakeState());
 //            telemetry.addData("  power", robot.intake.getIntakePower());
 
-            telemetry.addLine("PARK----");
-            telemetry.addData("  state", robot.parker.getParkState());
-            telemetry.addData("  encoder", robot.parker.getMotorPos());
-            telemetry.addLine();
+//            telemetry.addLine("PARK----");
+//            telemetry.addData("  state", robot.parker.getParkState());
+//            telemetry.addData("  encoder", robot.parker.getMotorPos());
+//            telemetry.addLine();
+//
+//            telemetry.addLine("LIGHT----");
+//            telemetry.addData("binary value", robot.binaryLight.getLightValue());
+//            telemetry.addData("rgb value", robot.rgbLight.getLightValue());
+//
+//            telemetry.addLine("PEDRO----");
+//            robot.aprilTagDetector.updateLocalization();
+            telemetry.addData("  pos", robot.limelight.getBotPose().getPosition());
+            telemetry.addData("  bot heading", robot.limelight.getBotHeading() * 180/Math.PI);
+            telemetry.addData("  bot pose", robot.limelight.getBotPose());
 
-            telemetry.addLine("LIGHT----");
-            telemetry.addData("binary value", robot.binaryLight.getLightValue());
-            telemetry.addData("rgb value", robot.rgbLight.getLightValue());
-
-            telemetry.addLine("PEDRO----");
             telemetry.addData("  x", robot.getX());
             telemetry.addData("  y", robot.getY());
             telemetry.addData("  heading (deg)", robot.getHeading()*180/Math.PI);
+//            telemetry.addData("  local tag offsets", robot.aprilTagDetector.rawTagOffset);
+//            tag = robot.aprilTagDetector.getTag(20);
+//            if(tag != null) {
+//                telemetry.addData("  bearing", tag.ftcPose.bearing);
+//            }
+//            telemetry.addData("  robot vec", robot.aprilTagDetector.robotPos);
+//            telemetry.addData("  robot orient", robot.aprilTagDetector.robotOrient);
             telemetry.update();
-            prevSec = timer.seconds();
         }
     }
 }

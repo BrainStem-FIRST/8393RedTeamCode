@@ -1,14 +1,16 @@
 package org.firstinspires.ftc.teamcode.robot;
 
-import android.annotation.SuppressLint;
 import android.util.Size;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
-import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.firstinspires.ftc.teamcode.utils.math.Vector3;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
@@ -18,29 +20,39 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 @Config
-public class AprilTagDetector {
-    public static int cameraResX = 1600, cameraResY = 1200;
-    public int[] fieldTags = new int[] {20, 24};
-    //Focals (pixels) - Fx: 628.438 Fy: 628.438
-    //Optical center - Cx: 986.138 Cy: 739.836
+public class WebcamAprilTagDetector {
+    public static int cameraResX = 1920, cameraResY = 1200;
+    public static double cx = 0, cz = 15.4331, cy = -3; // camera position relative to robot origin (x=left/right, y=up/down, z=forwards/backwards)
+    public static double yaw = 0, pitch = 80, roll = 0; // camera axes orientation relative to robot heading vector (IN DEGREES)
+    public final Position cameraPosition = new Position(DistanceUnit.INCH,cx, cy, cz, 0);
+    public final YawPitchRollAngles cameraOrientation = new YawPitchRollAngles(AngleUnit.DEGREES, yaw, pitch, roll, 0);
 
+    //Focals (pixels) - Fx: 599.162 Fy: 599.162
+    //Optical center - Cx: 922.924 Cy: 624.331
+    // error for these stats was 0.31
+
+    //Focals (pixels) - Fx: 597.203 Fy: 597.203
+    //Optical center - Cx: 923.189 Cy: 623.277
+    // error for these stats was 0.27
     private final Robot robot;
     private final AprilTagProcessor tagProcessor;
     private final VisionPortal visionPortal;
     private ArrayList<AprilTagDetection> detections;
     private final ArrayList<String> detectionData;
-    private double x, y, a; // predicted x y and angle from april tags
-    public AprilTagDetector(Robot robot) {
+    public final Vector3 robotPos, robotOrient, rawTagOffset;
+    public WebcamAprilTagDetector(Robot robot) {
         this.robot = robot;
         tagProcessor = new AprilTagProcessor.Builder()
                 .setDrawAxes(true)
                 .setDrawCubeProjection(true)
                 .setDrawTagID(true)
                 .setDrawTagOutline(true)
+                .setCameraPose(cameraPosition, cameraOrientation)
                 .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
                 .setTagLibrary(AprilTagGameDatabase.getDecodeTagLibrary())
-                .setLensIntrinsics(628.438, 628.438, 986.138, 739.836)
+                .setLensIntrinsics(597.203, 597.203, 923.189, 623.277)
                 .build();
+        tagProcessor.setPoseSolver(AprilTagProcessor.PoseSolver.OPENCV_SOLVEPNP_EPNP);
         visionPortal = new VisionPortal.Builder()
                 .setCamera(robot.hardwareMap.get(WebcamName.class, "webcam"))
                 .addProcessor(tagProcessor)
@@ -49,9 +61,13 @@ public class AprilTagDetector {
                 .build();
         detections = new ArrayList<>();
         detectionData = new ArrayList<>();
+        FtcDashboard.getInstance().startCameraStream(visionPortal, 60);
+        robotPos = new Vector3(0, 0, 0);
+        robotOrient = new Vector3(0, 0, 0); // pitch, yaw, and roll, respectively
+        rawTagOffset = new Vector3(0, 0, 0);
     }
 
-    public void update() {
+    public void updateDetections() {
         detections = tagProcessor.getDetections();
         detectionData.clear();
         if (!detections.isEmpty()) {
@@ -63,7 +79,14 @@ public class AprilTagDetector {
                     detectionData.add(tag.id + "");
             }
         }
-        // 21: gpp, 22: pgp, 23: ppg
+    }
+    public void updateLocalization() {
+        AprilTagDetection tag = getTag(20);
+        if(tag == null)
+            return;
+        rawTagOffset.set(tag.ftcPose.x, tag.ftcPose.y, tag.ftcPose.z);
+        robotPos.set(tag.robotPose.getPosition().x, tag.robotPose.getPosition().y, tag.robotPose.getPosition().z);
+        robotOrient.set(tag.robotPose.getOrientation().getPitch(AngleUnit.DEGREES), tag.robotPose.getOrientation().getYaw(AngleUnit.DEGREES), tag.robotPose.getOrientation().getRoll(AngleUnit.DEGREES));
     }
     public AprilTagDetection getTag(int id) {
         for(AprilTagDetection tag : detections)
@@ -74,15 +97,10 @@ public class AprilTagDetector {
     public String getTagData() {
         return Arrays.toString(detectionData.toArray());
     }
-    @SuppressLint("DefaultLocale")
-    public String getLocationData(int id) {
-        StringBuilder str = new StringBuilder();
-        AprilTagDetection tag = getTag(id);
-        if (tag != null) {
-            str.append(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", tag.ftcPose.x, tag.ftcPose.y, tag.ftcPose.z));
-            str.append(String.format("PRY %6.1f %6.1f %6.1f  (deg)", tag.ftcPose.pitch, tag.ftcPose.roll, tag.ftcPose.yaw));
-            str.append(String.format("RBE %6.1f %6.1f %6.1f  (inch, deg, deg)", tag.ftcPose.range, tag.ftcPose.bearing, tag.ftcPose.elevation));
-        }
-        return str.toString();
+    public double getCameraFps() {
+        return visionPortal.getFps();
+    }
+    public double getAvgPoseCalcTime() {
+        return tagProcessor.getPerTagAvgPoseSolveTime();
     }
 }
