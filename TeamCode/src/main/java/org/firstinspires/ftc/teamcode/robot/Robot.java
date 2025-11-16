@@ -10,8 +10,6 @@ import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 import org.firstinspires.ftc.teamcode.utils.NullGamepadTracker;
@@ -32,6 +30,7 @@ public class Robot {
 //    public final WebcamAprilTagDetector aprilTagDetector;
     public Limelight limelight;
     public static class Params {
+        public double turretAngle = 0, robotTurretOffset = 10;
         public double turnCollectAmp = 0.5, driveCollectAmp = 0.7;
         public boolean red = false;
         public double goalXNearBlue = -69, goalYNearBlue = -69, goalXFarBlue = -69, goalYFarBlue = -69;
@@ -120,7 +119,7 @@ public class Robot {
 
     public void updateSubsystems() {
 //        aprilTagDetector.updateDetections();
-        limelight.update();
+        limelight.update(params.turretAngle, params.robotTurretOffset);
         indexer.resetCaches();
         shooter.resetCaches();
         intake.update();
@@ -135,13 +134,8 @@ public class Robot {
         x = follower.getPose().getX();
         y = follower.getPose().getY();
         // updating with april tag
-        if(g1.isFirstBack())
-            follower.setPose(new Pose(limelight.getBotPos().x, limelight.getBotPos().y, limelight.getBotHeading()));
-        telemetry.addData("lx", limelight.getBotPos().x);
-        telemetry.addData("ly", limelight.getBotPos().y);
-        telemetry.addData("xOff", xOff);
-        telemetry.addData("yOff", yOff);
-        telemetry.addData("headingOff", headingOff);
+        if(g1.isFirstBack() && limelight.getTurretPos() != null)
+            follower.setPose(new Pose(limelight.getTurretPos().x, limelight.getTurretPos().y, limelight.getTurretHeading()));
         goalHeading = Math.atan2(y - goalY, x - goalX);
     }
     private double avg(double n1, double n2) {

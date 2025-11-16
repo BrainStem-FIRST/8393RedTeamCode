@@ -91,7 +91,11 @@ public class MainTele extends LinearOpMode {
             telemetry.addLine("LIGHT----");
             telemetry.addData("rgb value", robot.rgbLight.getLightValue());
 //
-            telemetry.addLine("PEDRO----");
+            telemetry.addLine("PEDRO/LIMELIGHT----");
+            telemetry.addData("  turret pos", robot.limelight.getTurretPos());
+            telemetry.addData("  turret heading", robot.limelight.getTurretHeading());
+            telemetry.addData("  robot pos", robot.limelight.getRobotPos());
+            telemetry.addData("  robot heading", robot.limelight.getRobotHeading());
             telemetry.addData("  x", robot.getX());
             telemetry.addData("  y", robot.getY());
             telemetry.addData("  heading (deg)", robot.getHeading()*180/Math.PI);
