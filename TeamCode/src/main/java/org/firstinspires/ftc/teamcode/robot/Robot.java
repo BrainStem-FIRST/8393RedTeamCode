@@ -34,8 +34,8 @@ public class Robot {
     public static class Params {
         public double turnCollectAmp = 0.5, driveCollectAmp = 0.7;
         public boolean red = false;
-        public double goalXNearBlue = 4, goalYNearBlue = 139, goalXFarBlue = 6, goalYFarBlue = 139;
-        public double goalXNearRed = 140, goalYNearRed = 137, goalXFarRed = 138, goalYFarRed = 139;
+        public double goalXNearBlue = -69, goalYNearBlue = -69, goalXFarBlue = -69, goalYFarBlue = -69;
+        public double goalXNearRed = -69, goalYNearRed = 69, goalXFarRed = -69, goalYFarRed = 69;
         public double turnCorrection = 0.14, turnAmpNormal = 0.8, turnAmpSlow = 0.4;
         public int greenPos = -1;
         public double width = 16.75, wheelToWheelL = 10.75;
@@ -43,8 +43,8 @@ public class Robot {
         public double intakeToWheelCenter = 9.675;
         public double backToWheelCenter = wheelToWheelL / 2 + backToBackWheelL;
         public double tickW = 0.8;
-        public double kPBig = 0.5, kDBig = 0, kF = 0;
-        public double kPSmall = 1.1, kDSmall = 0;
+        public double kPBig = 0.8, kDBig = 0, kF = 0;
+        public double kPSmall = 1.5, kDSmall = 0;
         public double pidSwitch = 0.1345;
         public double minShooterTurn = 0.07, maxShooterTurn = 0.3, shootD2MoveAmp = 0.6;
         public double headingShootError = 0.03490658;
@@ -55,6 +55,7 @@ public class Robot {
     private double headingLockOffset;
     private PIDFController autoTurnPidBig, autoTurnPidSmall;
     private double x, y, heading, goalHeading;
+    private double xOff, yOff, headingOff;
     private boolean slowTurn;
     public static Params params = new Params();
     // used for auto
@@ -130,19 +131,18 @@ public class Robot {
         parker.update();
 
         // updating pose
-        heading = follower.getHeading();
+        heading = follower.getHeading(); // heading ranges from -pi to pi
         x = follower.getPose().getX();
         y = follower.getPose().getY();
         // updating with april tag
-        if(g1.isFirstBack()) {
-            double aprilX = limelight.getBotPos().x;
-            double aprilY = limelight.getBotPos().y;
-            double aprilHeading = limelight.getBotHeading();
-            x = avg(x, aprilX);
-            y = avg(y, aprilY);
-            heading = avg(aprilHeading, heading);
-        }
-        goalHeading = Math.atan2(follower.getPose().getY() - goalY, follower.getPose().getX() - goalX);
+        if(g1.isFirstBack())
+            follower.setPose(new Pose(limelight.getBotPos().x, limelight.getBotPos().y, limelight.getBotHeading()));
+        telemetry.addData("lx", limelight.getBotPos().x);
+        telemetry.addData("ly", limelight.getBotPos().y);
+        telemetry.addData("xOff", xOff);
+        telemetry.addData("yOff", yOff);
+        telemetry.addData("headingOff", headingOff);
+        goalHeading = Math.atan2(y - goalY, x - goalX);
     }
     private double avg(double n1, double n2) {
         return (n1 + n2) / 2;

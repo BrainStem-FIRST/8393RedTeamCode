@@ -96,10 +96,10 @@ public class Shooter {
     public void update() {
         goalDist = Math.sqrt(Math.pow(robot.getX() - robot.getGoalX(), 2) + Math.pow(robot.getY() - robot.getGoalY(), 2));
 
-        if(robot.g2.isFirstStart())
+        if(robot.g2.isFirstStart() || robot.g1.isFirstStart())
             resting = !resting;
         // zone changers
-        if(robot.g2.isFirstDpadUp() || (zoneChangeCued && zone == 0)) {
+        if(robot.g1.isFirstDpadUp() || (zoneChangeCued && zone == 0)) {
             zone = 0;
             targetMotorVel = params.shooterVelocityNear;
             minMotorVel = params.minShooterVelNear;
@@ -107,7 +107,7 @@ public class Shooter {
             targetMotorPower = params.shooterPowerNear;
             shooterPid.setTarget(targetMotorVel);
         }
-        else if(robot.g2.isFirstDpadDown() || (zoneChangeCued && zone == 1)) {
+        else if(robot.g1.isFirstDpadDown() || (zoneChangeCued && zone == 1)) {
             zone = 1;
             targetMotorVel = params.shooterVelocityFar;
             minMotorVel = params.minShooterVelFar;

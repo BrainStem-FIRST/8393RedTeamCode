@@ -96,12 +96,13 @@ public class Indexer {
         shouldCheckMidCS = true;
 
         curPatternI = 0;
-        shouldAutoRotate = false;
+        shouldAutoRotate = true;
         pidSelected = "normal";
 
         lastIntakedColor = BallColor.N;
         indexerState = IndexerState.TARGET;
         shouldOscillate = true;
+        resetEncoder();
     }
     public void setAutoIndexMode(int mode) {
         autoIndexMode = mode;
@@ -162,6 +163,8 @@ public class Indexer {
         return oscillateValid;
     }
     private void updateIndexer(boolean oscillateValid) {
+        if(robot.g1.isFirstY())
+            shouldAutoRotate = !shouldAutoRotate;
         // listening for gamepad input to index
         if (robot.transfer.getTransferState() == Transfer.TransferState.OFF) {
             if (robot.g2.isFirstB())
@@ -221,10 +224,6 @@ public class Indexer {
         if(indexPower != prevIndexPower)
             indexer.setPower(indexPower);
         prevIndexPower = indexPower;
-
-        //misc
-        if(robot.g1.isFirstStart())
-            shouldOscillate = !shouldOscillate;
     }
     private void calcIndexerPidPower() {
         indexerPid.updatePosition(getIndexerEncoder());
