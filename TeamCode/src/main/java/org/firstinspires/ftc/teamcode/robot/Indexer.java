@@ -34,7 +34,6 @@ public class Indexer {
     // indexer stuff
     private final CRServo indexer;
     private final DcMotorEx indexerEncoderTracker;
-    private int curEncoder;
     private boolean encoderUpdated; // for caching
     private double targetEncoder, oscillateTargetEncoder;
     private final PIDFController cwPid60, ccwPid60, cwPid120, ccwPid120, ccPid180;
@@ -107,10 +106,6 @@ public class Indexer {
     public void setAutoIndexMode(int mode) {
         autoIndexMode = mode;
     }
-    public void resetCaches() {
-        encoderUpdated = false;
-    }
-
     public void update() {
         updateIndexer(updateColorSensors());
         updateIndexerAutoRotate();
@@ -375,11 +370,7 @@ public class Indexer {
         curPatternI = (curPatternI + 1) % 3;
     }
     public int getIndexerEncoder() {
-        if(!encoderUpdated) {
-            encoderUpdated = true;
-            curEncoder = indexerEncoderTracker.getCurrentPosition();
-        }
-        return curEncoder;
+        return indexerEncoderTracker.getCurrentPosition();
     }
     public double getIndexerPower() {
         return indexer.getPower();

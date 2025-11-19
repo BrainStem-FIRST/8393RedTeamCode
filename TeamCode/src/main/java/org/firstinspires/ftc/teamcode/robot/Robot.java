@@ -5,6 +5,7 @@ import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.control.PIDFController;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.Range;
@@ -13,6 +14,8 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 import org.firstinspires.ftc.teamcode.utils.NullGamepadTracker;
+
+import java.util.List;
 
 @Config
 public class Robot {
@@ -29,6 +32,8 @@ public class Robot {
     public final RGBLight rgbLight;
 //    public final WebcamAprilTagDetector aprilTagDetector;
     public Limelight limelight;
+    private List<LynxModule> allHubs;
+
     public static class Params {
         public double turretAngle = 0, robotTurretOffset = 10;
         public double turnCollectAmp = 0.5, driveCollectAmp = 0.7;
@@ -102,6 +107,12 @@ public class Robot {
         autoTurnPidSmall = new PIDFController(new PIDFCoefficients(params.kPSmall, 0, params.kDSmall, params.kF));
         follower.setStartingPose(startPose);
     }
+    private void initBulkRead() {
+        allHubs = hardwareMap.getAll(LynxModule.class);
+        for(LynxModule hub : allHubs) {
+            hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        }
+    }
     public void setStartPose(Pose startPose) {
         follower.setStartingPose(startPose);
     }
@@ -119,9 +130,9 @@ public class Robot {
 
     public void updateSubsystems() {
 //        aprilTagDetector.updateDetections();
+        for(LynxModule hub : allHubs)
+            hub.clearBulkCache();
         limelight.update(params.turretAngle, params.robotTurretOffset);
-        indexer.resetCaches();
-        shooter.resetCaches();
         intake.update();
         indexer.update();
         transfer.update();
