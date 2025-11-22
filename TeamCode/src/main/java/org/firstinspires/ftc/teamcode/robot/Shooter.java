@@ -36,6 +36,7 @@ public class Shooter {
 
         public double manualHoodInc = 0.05, manualShooterInc = 2.5;
         public double hoodOffset;
+        public double targetHoodNear = 0.75;
     }
     public static Params params = new Params();
     private final Robot robot;
@@ -137,7 +138,8 @@ public class Shooter {
         // automatically setting hood
         if(!hoodLocked) {
             if (zone == 0)
-                targetHoodPos = Range.clip(Range.clip(hoodNearRegress.eval(getShooterVelocity() + params.hoodNearOffset), 0, 1) + hoodOffset, 0, 1);
+                targetHoodPos = params.targetHoodNear;
+//                targetHoodPos = Range.clip(Range.clip(hoodNearRegress.eval(getShooterVelocity() + params.hoodNearOffset), 0, 1) + hoodOffset, 0, 1);
             else if(zone == 1)
                 targetHoodPos = Range.clip(Range.clip(hoodFarRegress.eval(getShooterVelocity()), 0, 1) + hoodOffset, 0, 1);
             else
@@ -187,11 +189,7 @@ public class Shooter {
         motor2.setPower(-power);
     }
     public double getShooterVelocity() {
-        if(!velUpdated) {
-            velUpdated = true;
-            curMotorVel = (motor1.getVelocity(AngleUnit.DEGREES) - motor2.getVelocity(AngleUnit.DEGREES)) * 0.5;
-        }
-        return curMotorVel;
+        return (Math.abs(motor1.getVelocity(AngleUnit.DEGREES)) + Math.abs(motor2.getVelocity(AngleUnit.DEGREES))) * 0.5;
     }
     public double getMinShooterVel() {
         return minMotorVel;
@@ -226,5 +224,11 @@ public class Shooter {
     }
     public double goalDist() {
         return goalDist;
+    }
+    public double getShooter1Pos() {
+        return motor1.getCurrentPosition();
+    }
+    public double getShooter2Pos() {
+        return motor2.getCurrentPosition();
     }
 }

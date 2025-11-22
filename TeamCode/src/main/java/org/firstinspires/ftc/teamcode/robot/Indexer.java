@@ -162,20 +162,20 @@ public class Indexer {
             shouldAutoRotate = !shouldAutoRotate;
         // listening for gamepad input to index
         if (robot.transfer.getTransferState() == Transfer.TransferState.OFF) {
-            if (robot.g2.isFirstB())
-                rotate(2);
-            else if (robot.g2.isFirstX())
-                rotate(-2);
-            else if(robot.g2.isFirstY())
-                rotate(getAlignShootOffset());
-            else if(robot.g2.isFirstA())
-                rotate(getAlignCollectOffset());
-            else if(robot.g2.isFirstLeftBumper())
-                resetEncoder();
-            else if(robot.g2.isFirstRightBumper()) {
-                curPatternI = (curPatternI + 2) % 3;
-                rotate(getAlignShootOffset());
-            }
+            if (robot.g1.isFirstB())
+                rotate(1);
+            else if (robot.g1.isFirstA())
+                rotate(-1);
+//            else if(robot.g2.isFirstY())
+//                rotate(getAlignShootOffset());
+//            else if(robot.g2.isFirstA())
+//                rotate(getAlignCollectOffset());
+//            else if(robot.g2.isFirstLeftBumper())
+//                resetEncoder();
+//            else if(robot.g2.isFirstRightBumper()) {
+//                curPatternI = (curPatternI + 2) % 3;
+//                rotate(getAlignShootOffset());
+//            }
         }
 
         // listen for oscillate state change

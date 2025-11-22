@@ -64,6 +64,10 @@ public class Robot {
     public static Params params = new Params();
     // used for auto
     public Robot(HardwareMap hardwareMap, Telemetry telemetry, Pose startPose) {
+        allHubs = hardwareMap.getAll(LynxModule.class);
+        for(LynxModule hub : allHubs) {
+            hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        }
         this.hardwareMap = hardwareMap;
         this.telemetry = telemetry;
         g1 = new NullGamepadTracker();
@@ -85,6 +89,10 @@ public class Robot {
 
     // used for tele
     public Robot(HardwareMap hardwareMap, Telemetry telemetry, GamepadTracker g1, GamepadTracker g2, Pose startPose) {
+        allHubs = hardwareMap.getAll(LynxModule.class);
+        for(LynxModule hub : allHubs) {
+            hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        }
         this.hardwareMap = hardwareMap;
 
         this.telemetry = telemetry;
@@ -106,12 +114,6 @@ public class Robot {
         autoTurnPidBig = new PIDFController(new PIDFCoefficients(params.kPBig, 0, params.kDBig, params.kF));
         autoTurnPidSmall = new PIDFController(new PIDFCoefficients(params.kPSmall, 0, params.kDSmall, params.kF));
         follower.setStartingPose(startPose);
-    }
-    private void initBulkRead() {
-        allHubs = hardwareMap.getAll(LynxModule.class);
-        for(LynxModule hub : allHubs) {
-            hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
-        }
     }
     public void setStartPose(Pose startPose) {
         follower.setStartingPose(startPose);

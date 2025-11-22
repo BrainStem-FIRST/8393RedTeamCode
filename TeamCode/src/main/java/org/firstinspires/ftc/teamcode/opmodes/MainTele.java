@@ -46,6 +46,8 @@ public class MainTele extends LinearOpMode {
             robot.updateTele();
             telemetry.addLine("SHOOTER----");
             telemetry.addData("vel", robot.shooter.getShooterVelocity());
+            telemetry.addData("1pos, 2pos", robot.shooter.getShooter1Pos() + ", " + robot.shooter.getShooter2Pos());
+            telemetry.addData("target", robot.shooter.getTargetMotorVel());
             telemetry.addData("power", robot.shooter.getShooterPower());
             telemetry.addData("hood", robot.shooter.getHoodPos());
             telemetry.addData("zone", robot.shooter.getZone());
