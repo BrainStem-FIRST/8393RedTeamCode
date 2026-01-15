@@ -1,17 +1,16 @@
 package org.firstinspires.ftc.teamcode.robot;
 
 import com.acmerobotics.dashboard.config.Config;
-import com.pedropathing.control.PIDFCoefficients;
-import com.pedropathing.control.PIDFController;
-import com.pedropathing.follower.Follower;
-import com.pedropathing.geometry.Pose;
+//import com.pedropathing.control.PIDFCoefficients;
+//import com.pedropathing.control.PIDFController;
+//import com.pedropathing.follower.Follower;
+//import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.utils.GamepadTracker;
 import org.firstinspires.ftc.teamcode.utils.NullGamepadTracker;
 
@@ -22,7 +21,7 @@ public class Robot {
     public final HardwareMap hardwareMap;
     public final Telemetry telemetry;
     public final GamepadTracker g1, g2;
-    public final Follower follower;
+//    public final Follower follower;
     public final Intake intake;
     public final Indexer indexer;
     public final Transfer transfer;
@@ -57,13 +56,13 @@ public class Robot {
     }
     private double goalX, goalY;
     private double headingLockOffset;
-    private PIDFController autoTurnPidBig, autoTurnPidSmall;
+//    private PIDFController autoTurnPidBig, autoTurnPidSmall;
     private double x, y, heading, goalHeading;
     private double xOff, yOff, headingOff;
     private boolean slowTurn;
     public static Params params = new Params();
     // used for auto
-    public Robot(HardwareMap hardwareMap, Telemetry telemetry, Pose startPose) {
+    public Robot(HardwareMap hardwareMap, Telemetry telemetry) {
         allHubs = hardwareMap.getAll(LynxModule.class);
         for(LynxModule hub : allHubs) {
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
@@ -78,17 +77,17 @@ public class Robot {
         transfer = new Transfer(this);
         shooter = new Shooter(this);
         parker = new Parker(this);
-        follower = Constants.createFollower(hardwareMap);
+//        follower = Constants.createFollower(hardwareMap);
         binaryLight = new BinaryLight(this);
         rgbLight = new RGBLight(this);
 //        aprilTagDetector = new WebcamAprilTagDetector(this);
         limelight = new Limelight(this);
 
-        follower.setStartingPose(startPose);
+//        follower.setStartingPose(startPose);
     }
 
     // used for tele
-    public Robot(HardwareMap hardwareMap, Telemetry telemetry, GamepadTracker g1, GamepadTracker g2, Pose startPose) {
+    public Robot(HardwareMap hardwareMap, Telemetry telemetry, GamepadTracker g1, GamepadTracker g2) {
         allHubs = hardwareMap.getAll(LynxModule.class);
         for(LynxModule hub : allHubs) {
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
@@ -109,15 +108,15 @@ public class Robot {
 //        aprilTagDetector = new WebcamAprilTagDetector(this);
         limelight = new Limelight(this);
 
-        follower = Constants.createFollower(hardwareMap);
+//        follower = Constants.createFollower(hardwareMap);
 
-        autoTurnPidBig = new PIDFController(new PIDFCoefficients(params.kPBig, 0, params.kDBig, params.kF));
-        autoTurnPidSmall = new PIDFController(new PIDFCoefficients(params.kPSmall, 0, params.kDSmall, params.kF));
-        follower.setStartingPose(startPose);
+//        autoTurnPidBig = new PIDFController(new PIDFCoefficients(params.kPBig, 0, params.kDBig, params.kF));
+//        autoTurnPidSmall = new PIDFController(new PIDFCoefficients(params.kPSmall, 0, params.kDSmall, params.kF));
+//        follower.setStartingPose(startPose);
     }
-    public void setStartPose(Pose startPose) {
-        follower.setStartingPose(startPose);
-    }
+//    public void setStartPose(Pose startPose) {
+//        follower.setStartingPose(startPose);
+//    }
     public void updatePattern() {
 //        if(aprilTagDetector.getTag(21) != null)
 //            params.greenPos = 0;
@@ -143,12 +142,12 @@ public class Robot {
         parker.update();
 
         // updating pose
-        heading = follower.getHeading(); // heading ranges from -pi to pi
-        x = follower.getPose().getX();
-        y = follower.getPose().getY();
-        // updating with april tag
-        if(g1.isFirstBack() && limelight.getTurretPos() != null)
-            follower.setPose(new Pose(limelight.getTurretPos().x, limelight.getTurretPos().y, limelight.getTurretHeading()));
+//        heading = follower.getHeading(); // heading ranges from -pi to pi
+//        x = follower.getPose().getX();
+//        y = follower.getPose().getY();
+//        // updating with april tag
+//        if(g1.isFirstBack() && limelight.getTurretPos() != null)
+//            follower.setPose(new Pose(limelight.getTurretPos().x, limelight.getTurretPos().y, limelight.getTurretHeading()));
         goalHeading = Math.atan2(y - goalY, x - goalX);
     }
     private double avg(double n1, double n2) {
@@ -183,26 +182,26 @@ public class Robot {
         setGoalPos();
     }
     public void initPedroTele() {
-        follower.startTeleopDrive();
-        follower.update();
+//        follower.startTeleopDrive();
+//        follower.update();
     }
     private void updatePedroTele() {
-        double disp = goalHeading - heading + headingLockOffset;
-        double turnPower = Range.clip(-g1.rightStickX() * params.turnAmpNormal + g1.leftStickX() * params.turnCorrection, -1, 1);
-        slowTurn = g1.leftBumper();
-        if(slowTurn) {
-                if(Math.abs(disp) > params.pidSwitch) {
-                    telemetry.addLine("pid BIG");
-                    autoTurnPidBig.updateError(disp);
-                    turnPower = autoTurnPidBig.run();
-                }
-                else {
-                    telemetry.addLine("pid SMALL");
-                    autoTurnPidSmall.updateError(disp);
-                    turnPower = autoTurnPidSmall.run();
-                }
-                turnPower = Math.max(Math.min(Math.abs(turnPower), params.maxShooterTurn), params.minShooterTurn) * Math.signum(turnPower) - params.turnAmpSlow * g1.rightStickX();
-        }
+//        double disp = goalHeading - heading + headingLockOffset;
+//        double turnPower = Range.clip(-g1.rightStickX() * params.turnAmpNormal + g1.leftStickX() * params.turnCorrection, -1, 1);
+//        slowTurn = g1.leftBumper();
+//        if(slowTurn) {
+//                if(Math.abs(disp) > params.pidSwitch) {
+//                    telemetry.addLine("pid BIG");
+//                    autoTurnPidBig.updateError(disp);
+//                    turnPower = autoTurnPidBig.run();
+//                }
+//                else {
+//                    telemetry.addLine("pid SMALL");
+//                    autoTurnPidSmall.updateError(disp);
+//                    turnPower = autoTurnPidSmall.run();
+//                }
+//                turnPower = Math.max(Math.min(Math.abs(turnPower), params.maxShooterTurn), params.minShooterTurn) * Math.signum(turnPower) - params.turnAmpSlow * g1.rightStickX();
+//        }
 //        telemetry.addData("dx", params.goalX - follower.getPose().getX());
 //        telemetry.addData("dy", params.goalY - follower.getPose().getY());
 //        telemetry.addData("goalHeading", Math.floor(goalHeading * 180 / Math.PI * 100)/100);
@@ -210,20 +209,20 @@ public class Robot {
 //        telemetry.addData("turn power", turnPower);
 //        telemetry.addData("slow turn", slowTurn);
 
-        double axialPower = -g1.leftStickY();
-        double lateralPower = -g1.leftStickX();
-        if(Math.abs(g2.leftStickY()) > 0.03 || Math.abs(g2.leftStickX()) > 0.03 || Math.abs(g2.rightStickX()) > 0.03) {
-            axialPower = -Math.sqrt(Math.abs(g2.leftStickY())) * Math.signum(g2.leftStickY()) * params.shootD2MoveAmp;
-            lateralPower = -Math.sqrt(Math.abs(g2.leftStickX())) * Math.signum(g2.leftStickX()) * params.shootD2MoveAmp;
-            turnPower = Range.clip(-g2.rightStickX() * params.turnAmpSlow + g2.leftStickX() * params.turnCorrection, -1, 1);
-        }
-        else if(intake.getIntakeState() == Intake.IntakeState.INTAKING) {
-            axialPower *= params.driveCollectAmp;
-            lateralPower *= params.driveCollectAmp;
-            turnPower *= params.turnCollectAmp;
-        }
-        follower.setTeleOpDrive(axialPower, lateralPower, turnPower, true);
-        follower.update();
+//        double axialPower = -g1.leftStickY();
+//        double lateralPower = -g1.leftStickX();
+//        if(Math.abs(g2.leftStickY()) > 0.03 || Math.abs(g2.leftStickX()) > 0.03 || Math.abs(g2.rightStickX()) > 0.03) {
+//            axialPower = -Math.sqrt(Math.abs(g2.leftStickY())) * Math.signum(g2.leftStickY()) * params.shootD2MoveAmp;
+//            lateralPower = -Math.sqrt(Math.abs(g2.leftStickX())) * Math.signum(g2.leftStickX()) * params.shootD2MoveAmp;
+//            turnPower = Range.clip(-g2.rightStickX() * params.turnAmpSlow + g2.leftStickX() * params.turnCorrection, -1, 1);
+//        }
+//        else if(intake.getIntakeState() == Intake.IntakeState.INTAKING) {
+//            axialPower *= params.driveCollectAmp;
+//            lateralPower *= params.driveCollectAmp;
+//            turnPower *= params.turnCollectAmp;
+//        }
+//        follower.setTeleOpDrive(axialPower, lateralPower, turnPower, true);
+//        follower.update();
     }
     public double getBatteryVoltage() {
         double result = Double.POSITIVE_INFINITY;

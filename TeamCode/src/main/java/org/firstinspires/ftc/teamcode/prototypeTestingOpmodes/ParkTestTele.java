@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.prototypeTestingOpmodes;
 
-import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -13,7 +12,7 @@ public class ParkTestTele extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         GamepadTracker g1 = new GamepadTracker(gamepad1);
         GamepadTracker g2 = new GamepadTracker(gamepad2);
-        Robot robot = new Robot(hardwareMap, telemetry, g1, g2, new Pose(0, 0, 0));
+        Robot robot = new Robot(hardwareMap, telemetry, g1, g2);
         robot.initPedroTele();
         boolean testing = true;
         waitForStart();
